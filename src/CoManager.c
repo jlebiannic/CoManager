@@ -19,6 +19,10 @@ int main(void) {
 	Dao *dao = factoryInit();
 	dao->openDB(dao, NULL);
 
+	dao->getElement(dao, "data", "\"TX_INDEX\" = 1");
+	char *str = dao->getFieldValue(dao, "next");
+	printf("next is %s\n", str);
+
 	dao->closeDB(dao);
 
 	factoryEnd();
