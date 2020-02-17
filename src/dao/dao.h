@@ -14,8 +14,8 @@ typedef struct Dao {
 } Dao;
 
 
+void Dao_init(Dao*);
 void Dao_logError(const char *fctName, const char *msg);
 void Dao_logDebug(const char *fctName, const char *msg);
-
 
 #endif

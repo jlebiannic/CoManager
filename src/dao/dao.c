@@ -4,10 +4,7 @@
 #include<stdio.h>
 
 
-//static void Dao_notImplementedError(const char *fctName);
-
-// TODO static ?
-void Dao_Init(Dao *This) {
+void Dao_init(Dao *This) {
 	This->logError = Dao_logError;
 	This->logDebug = Dao_logDebug;
 }

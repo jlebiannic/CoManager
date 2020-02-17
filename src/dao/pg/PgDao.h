@@ -21,8 +21,7 @@ typedef struct PgDao {
 
 
 /* Constructors  */
-PgDao PgDao_Create(void);
-PgDao* PgDao_New(void);
+PgDao* PgDao_new(void);
 
 /* overrided functions */
 int PgDao_openDB(PgDao*, const char*);

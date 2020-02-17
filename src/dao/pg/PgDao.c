@@ -6,35 +6,27 @@
 
 
 
-static void PgDao_Init(PgDao*);
+static void PgDao_init(PgDao*);
 static void PgDao_setDefaultSchema(PgDao *This);
 
 /******************************************************************************/
 
-static void PgDao_Init(PgDao *This) {
+static void PgDao_init(PgDao *This) {
 	This->openDB = PgDao_openDB;
 	This->closeDB = PgDao_closeDB;
 	This->closeDBAndExit = PgDao_closeDBAndExit;
 
 	// parent functions
-	This->logError = (void*) Dao_logError;
-	This->logDebug = (void*) Dao_logDebug;
+	Dao_init((Dao*) This);
 }
 
-PgDao PgDao_Create() {
-	PgDao This;
-	PgDao_Init(&This);
-	// TODO This.Free = ?;
-	return This;
-}
-
-PgDao* PgDao_New() {
+PgDao* PgDao_new() {
 	PgDao *This = malloc(sizeof(PgDao));
 	if (!This) {
 		This->logError("PgDao_New", "malloc failed");
 		return NULL;
 	}
-	PgDao_Init(This);
+	PgDao_init(This);
 	// TODO This.Free = ?;
 	return This;
 }

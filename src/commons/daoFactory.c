@@ -2,7 +2,7 @@
 #include "dao/pg/pgDao.h"
 
 Dao* factoryInit() {
-	return (Dao*) PgDao_New();
+	return (Dao*) PgDao_new();
 }
 
 void* factoryEnd() {
