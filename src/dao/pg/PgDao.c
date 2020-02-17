@@ -15,6 +15,8 @@ static void PgDao_Init(PgDao *This) {
 	This->openDB = PgDao_openDB;
 	This->closeDB = PgDao_closeDB;
 	This->closeDBAndExit = PgDao_closeDBAndExit;
+
+	// parent functions
 	This->logError = (void*) Dao_logError;
 	This->logDebug = (void*) Dao_logDebug;
 }
