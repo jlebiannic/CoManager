@@ -72,11 +72,12 @@ void PgDao_closeDBAndExit(PgDao *This) {
 void PgDao_getElement(PgDao *This, const char *table, const char *filter) {
 	const char *select = "SELECT * FROM";
 	const char *where = "WHERE";
-	char *query = malloc(strlen(select) + strlen(table) + strlen(where) + strlen(filter) + 4);
-	sprintf(query, "%s %s %s %s", select, table, where, filter);
 
+	char *query = malloc(strlen(select) + strlen(table) + strlen(where) + strlen(filter) + 6);
+	sprintf(query, "%s %s %s %s", select, table, where, filter);
 	PgDao_addResult(This, PQexec(This->conn, query));
 	free(query);
+
 	if (PQresultStatus(This->result) != PGRES_TUPLES_OK) {
 		This->logError("Query failed", PQerrorMessage(This->conn));
 		PQclear(This->result);
