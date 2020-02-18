@@ -18,6 +18,7 @@ static void PgDao_init(PgDao *This) {
 	This->closeDBAndExit = PgDao_closeDBAndExit;
 	This->getElement = PgDao_getElement;
 	This->getFieldValue = PgDao_getFieldValue;
+	This->addEntry = PgDao_addEntry;
 	This->beginTrans = PgDao_beginTrans;
 	This->endTrans = PgDao_endTrans;
 
@@ -70,8 +71,8 @@ void PgDao_closeDBAndExit(PgDao *This) {
 }
 
 void PgDao_getElement(PgDao *This, const char *table, const char *filter) {
-	const char *select = "SELECT * FROM";
-	const char *where = "WHERE";
+	const char select[] = "SELECT * FROM";
+	const char where[] = "WHERE";
 
 	char *query = malloc(strlen(select) + strlen(table) + strlen(where) + strlen(filter) + 6);
 	sprintf(query, "%s %s %s %s", select, table, where, filter);
@@ -79,7 +80,7 @@ void PgDao_getElement(PgDao *This, const char *table, const char *filter) {
 	free(query);
 
 	if (PQresultStatus(This->result) != PGRES_TUPLES_OK) {
-		This->logError("Query failed", PQerrorMessage(This->conn));
+		This->logError("PgDao_getElement failed", PQerrorMessage(This->conn));
 		PQclear(This->result);
 	}
 }
@@ -95,7 +96,7 @@ char* PgDao_getFieldValue(PgDao *This, const char *fieldName) {
 	int numField = -1;
 	char *name;
 	char* fielValue = NULL;
-	if (PQresultStatus(This->result)) {
+	if (PQresultStatus(This->result) == PGRES_TUPLES_OK) {
 		nFields = PQnfields(This->result);
 		for (i = 0; i < nFields; i++) {
 			name = PQfname(This->result, i);
@@ -113,6 +114,39 @@ char* PgDao_getFieldValue(PgDao *This, const char *fieldName) {
 		This->logError("PgDao_getFieldValue", "result is null");
 	}
 	return fielValue;
+}
+
+void PgDao_addEntry(PgDao *This, const char *table, time_t time) {
+	// FIXME Tous le champs ne sont pas initialisés contrairement à la source
+	This->logDebug("PgDao_addEntry", "start");
+	const char insertInto[] = "insert into";
+	char *query;
+
+	if (time) {
+		const char values[] = "(\"TX_INDEX\", \"CREATED\", \"MODIFIED\") values(default, $1, $2)";
+		const int paramLengths[] = { sizeof(time), sizeof(time) };
+		char strTime[21];
+		sprintf(strTime, "%d", time);
+		const char *const paramValues[] = { strTime, strTime };
+		const int paramFormats[] = { 0, 0 };
+		
+		query = malloc(strlen(insertInto) + strlen(table) + strlen(values) + 3);
+		sprintf(query, "%s %s %s", insertInto, table, values);
+		PgDao_addResult(This, PQexecParams(This->conn, query, 2, NULL, paramValues, paramLengths, paramFormats, 0));
+	} else {
+		const char values[] = "values(default)";
+		query = malloc(strlen(insertInto) + strlen(table) + strlen(values) + 3);
+		sprintf(query, "%s %s %s", insertInto, table, values);
+		PgDao_addResult(This, PQexec(This->conn, query));
+	}
+	This->logDebugFormat("query: %s", query);
+	free(query);
+
+	if (PQresultStatus(This->result) != PGRES_COMMAND_OK) {
+		This->logError("PgDao_addEntry failed", PQerrorMessage(This->conn));
+		PQclear(This->result);
+	}
+	This->logDebug("PgDao_addEntry", "end");
 }
 
 void PgDao_beginTrans(PgDao *This) {
@@ -143,6 +177,7 @@ void PgDao_endTrans(PgDao *This) {
 }
 
 static void PgDao_setDefaultSchema(PgDao *This) {
+	// FIXME à voir si cela est pertinent (fixer le schéma)
 	This->logDebug("PgDao_setDefaultSchema", "start");
 	PGresult *res;
 	res = PQexec(This->conn, "SELECT pg_catalog.set_config('search_path', '\"Tdx\"', false)");

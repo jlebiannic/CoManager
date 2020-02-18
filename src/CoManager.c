@@ -10,6 +10,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <time.h>
 
 #include "commons/daoFactory.h"
 
@@ -22,6 +23,9 @@ int main(void) {
 	dao->getElement(dao, "data", "\"TX_INDEX\" = 1");
 	char *str = dao->getFieldValue(dao, "next");
 	printf("next is %s\n", str);
+
+	dao->addEntry(dao, "data", time(NULL));
+	dao->addEntry(dao, "data", 0);
 
 	dao->closeDB(dao);
 

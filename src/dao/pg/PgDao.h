@@ -12,10 +12,12 @@ typedef struct PgDao {
 	void (*closeDBAndExit)(struct PgDao*);
 	void (*getElement)(struct PgDao*, const char*, const char*);
 	char* (*getFieldValue)(struct PgDao*, const char*);
+	void (*addEntry)(struct PgDao*, const char*, time_t);
 	void (*beginTrans)(struct PgDao*);
 	void (*endTrans)(struct PgDao*);
 	void (*logError)(const char*, const char*);
 	void (*logDebug)(const char*, const char*);
+	void (*logDebugFormat)(const char*, const char*);
 
 	/*  member functions                              */
 
@@ -34,6 +36,7 @@ void PgDao_closeDB(PgDao*);
 void PgDao_closeDBAndExit(PgDao*);
 void PgDao_getElement(PgDao*, const char*, const char*);
 char* PgDao_getFieldValue(PgDao *This, const char *fieldName);
+void PgDao_addEntry(PgDao *This, const char *table, time_t time);
 void PgDao_beginTrans(PgDao*);
 void PgDao_endTrans(PgDao*);
 
