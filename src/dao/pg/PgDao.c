@@ -8,7 +8,10 @@
 
 static void PgDao_init(PgDao*);
 static void PgDao_setDefaultSchema(PgDao *This);
+static void PgDao_exec(PgDao *This, const char *query);
+static void PgDao_execParams(PgDao *This, const char *command, int nParams, const Oid *paramTypes, const char *const*paramValues, const int *paramLengths, const int *paramFormats, int resultFormat);
 static void PgDao_addResult(PgDao *This, PGresult *res);
+static void PgDao_clearResult(PgDao *This);
 
 /******************************************************************************/
 
@@ -61,7 +64,7 @@ int PgDao_openDB(PgDao *This, const char *conninfo) {
 }
 
 void PgDao_closeDB(PgDao *This) {
-	PQclear(This->result);
+	PgDao_clearResult(This);
 	PQfinish(This->conn);
 }
 
@@ -81,13 +84,8 @@ void PgDao_getElement(PgDao *This, const char *table, const char *filter) {
 
 	if (PQresultStatus(This->result) != PGRES_TUPLES_OK) {
 		This->logError("PgDao_getElement failed", PQerrorMessage(This->conn));
-		PQclear(This->result);
+		PgDao_clearResult(This);
 	}
-}
-
-static void PgDao_addResult(PgDao *This, PGresult *res) {
-	PQclear(This->result);
-	This->result = res;
 }
 
 char* PgDao_getFieldValue(PgDao *This, const char *fieldName) {
@@ -129,23 +127,23 @@ void PgDao_addEntry(PgDao *This, const char *table, time_t time) {
 		sprintf(strTime, "%d", time);
 		const char *const paramValues[] = { strTime, strTime };
 		const int paramFormats[] = { 0, 0 };
-		
+
 		query = malloc(strlen(insertInto) + strlen(table) + strlen(values) + 3);
 		sprintf(query, "%s %s %s", insertInto, table, values);
-		PgDao_addResult(This, PQexecParams(This->conn, query, 2, NULL, paramValues, paramLengths, paramFormats, 0));
+		PgDao_execParams(This, query, 2, NULL, paramValues, paramLengths, paramFormats, 0);
 	} else {
 		const char values[] = "values(default)";
 		query = malloc(strlen(insertInto) + strlen(table) + strlen(values) + 3);
 		sprintf(query, "%s %s %s", insertInto, table, values);
-		PgDao_addResult(This, PQexec(This->conn, query));
+		PgDao_exec(This, query);
 	}
 	This->logDebugFormat("query: %s", query);
 	free(query);
 
 	if (PQresultStatus(This->result) != PGRES_COMMAND_OK) {
 		This->logError("PgDao_addEntry failed", PQerrorMessage(This->conn));
-		PQclear(This->result);
 	}
+	PgDao_clearResult(This);
 	This->logDebug("PgDao_addEntry", "end");
 }
 
@@ -164,31 +162,48 @@ void PgDao_beginTrans(PgDao *This) {
 
 void PgDao_endTrans(PgDao *This) {
 	This->logDebug("PgDao_endTransaction", "start");
-	PGresult *res;
 	/* termine la transaction */
-	res = PQexec(This->conn, "END");
-	if (PQresultStatus(res) != PGRES_COMMAND_OK) {
+	PgDao_exec(This, "END");
+	if (PQresultStatus(This->result) != PGRES_COMMAND_OK) {
 		fprintf(stderr, "END command failed: %s", PQerrorMessage(This->conn));
-		PQclear(res);
+		PgDao_clearResult(This);
 		This->closeDBAndExit(This);
 	}
-	PQclear(res);
+	PgDao_clearResult(This);
 	This->logDebug("PgDao_endTransaction", "end");
 }
+
+/******************************************************************************/
 
 static void PgDao_setDefaultSchema(PgDao *This) {
 	// FIXME à voir si cela est pertinent (fixer le schéma)
 	This->logDebug("PgDao_setDefaultSchema", "start");
-	PGresult *res;
-	res = PQexec(This->conn, "SELECT pg_catalog.set_config('search_path', '\"Tdx\"', false)");
-	if (PQresultStatus(res) != PGRES_TUPLES_OK) {
+	PgDao_exec(This, "SELECT pg_catalog.set_config('search_path', '\"Tdx\"', false)");
+	if (PQresultStatus(This->result) != PGRES_TUPLES_OK) {
 		This->logError("PgDao_setDefaultSchema", PQerrorMessage(This->conn));
-		PQclear(res);
+		PgDao_clearResult(This);
 		This->closeDBAndExit(This);
 	}
 	This->logDebug("PgDao_setDefaultSchema", "end");
-	PQclear(res);
+	PgDao_clearResult(This);
 }
 
+static void PgDao_exec(PgDao *This, const char *query) {
+	PgDao_addResult(This, PQexec(This->conn, query));
+}
 
+static void PgDao_execParams(PgDao *This, const char *command, int nParams, const Oid *paramTypes, const char *const*paramValues, const int *paramLengths, const int *paramFormats, int resultFormat) {
+	PgDao_addResult(This, PQexecParams(This->conn, command, nParams, paramTypes, paramValues, paramLengths, paramFormats, resultFormat));
+}
 
+static void PgDao_addResult(PgDao *This, PGresult *res) {
+	PgDao_clearResult(This);
+	This->result = res;
+}
+
+static void PgDao_clearResult(PgDao *This) {
+	if (This->result != NULL) {
+		PQclear(This->result);
+		This->result = NULL;
+	}
+}

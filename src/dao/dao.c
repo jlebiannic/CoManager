@@ -28,7 +28,7 @@ void Dao_logDebugFormat(char *formatAndParams, ...) {
 	va_start(ap, formatAndParams);
 	vprintf(formatAndParams, ap);
 	printf("\n");
-	fflush(stderr);
+	fflush(stdout);
 	va_end(ap);
 #endif
 }
