@@ -1,16 +1,21 @@
 #ifndef DAO_H
 #define DAO_H
-#include <crtdefs.h>
-
 
 typedef struct Dao {
 	/*  functions member                              */
+	int id;
 	int (*openDB)(struct Dao*, const char*);
+	int (*isDBOpen)(struct Dao*);
 	void (*closeDB)(struct Dao*);
 	void (*closeDBAndExit)(struct Dao*);
-	void (*getElement)(struct Dao*, const char*, const char*);
+	int (*execQuery)(struct Dao*, const char*);
+	void (*getEntry)(struct Dao*, const char*, const char*, const char*);
+	void (*getNextEntry)(struct Dao*);
+	int (*hasNextEntry)(struct Dao*);
 	char* (*getFieldValue)(struct Dao*, const char*);
-	void (*addEntry)(struct Dao*, const char*, time_t);
+	int (*getFieldValueAsInt)(struct Dao*, const char*);
+	unsigned int (*newEntry)(struct Dao*, const char *table);
+	void (*clearResult)(struct Dao*);
 	void (*beginTrans)(struct Dao*);
 	void (*endTrans)(struct Dao*);
 	void (*logError)(const char*, const char*);

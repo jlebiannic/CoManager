@@ -1,9 +1,8 @@
-#ifndef TYPES_H__
-#define TYPES_H__
+#ifndef DAOFACTORY_H__
+#define DAOFACTORY_H__
 
 #include "dao/dao.h"
 
-Dao* factoryInit();
-void* factoryEnd();
+Dao* daoFactory_create(int);
 
-#endif /* TYPES_H__*/
+#endif /* DAOFACTORY_H__*/

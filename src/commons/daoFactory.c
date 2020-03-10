@@ -1,11 +1,18 @@
 #include "commons/daoFactory.h"
 #include "dao/pg/pgDao.h"
 
-Dao* factoryInit() {
-	return (Dao*) PgDao_new();
-}
 
-void* factoryEnd() {
-	// TODO Free;
-	return 0;
+Dao* daoFactory_create(int useDao) {
+	Dao *dao = NULL;
+
+	switch (useDao) {
+	case 1:
+		// PostgreSQL DAO
+		dao = (Dao*) PgDao_new();
+		break;
+	default:
+		break;
+	}
+
+	return dao;
 }

@@ -4,7 +4,6 @@
 #include<stdio.h>
 #include <stdarg.h>
 
-
 void Dao_init(Dao *This) {
 	This->logError = Dao_logError;
 	This->logDebug = Dao_logDebug;
@@ -32,3 +31,11 @@ void Dao_logDebugFormat(char *formatAndParams, ...) {
 	va_end(ap);
 #endif
 }
+
+/**
+ * Find entries in database with filter
+ * return -1 if errors, >= 0 otherwise
+ * */
+
+
+
