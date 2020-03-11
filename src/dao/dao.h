@@ -9,6 +9,7 @@ typedef struct Dao {
 	void (*closeDB)(struct Dao*);
 	void (*closeDBAndExit)(struct Dao*);
 	int (*execQuery)(struct Dao*, const char*);
+	int (*execQueryMultiResults)(struct Dao*, const char*);
 	void (*getEntry)(struct Dao*, const char*, const char*, const char*);
 	void (*getNextEntry)(struct Dao*);
 	int (*hasNextEntry)(struct Dao*);
@@ -16,9 +17,10 @@ typedef struct Dao {
 	int (*getFieldValueAsInt)(struct Dao*, const char*);
 	unsigned int (*newEntry)(struct Dao*, const char *table);
 	void (*clearResult)(struct Dao*);
-	void (*beginTrans)(struct Dao*);
-	void (*endTrans)(struct Dao*);
+	int (*beginTrans)(struct Dao*);
+	int (*endTrans)(struct Dao*);
 	void (*logError)(const char*, const char*);
+	void (*logErrorFormat)(char *formatAndParams, ...);
 	void (*logDebug)(const char*, const char*);
 	void (*logDebugFormat)(char *formatAndParams, ...);
 
@@ -28,6 +30,7 @@ typedef struct Dao {
 
 void Dao_init(Dao*);
 void Dao_logError(const char *fctName, const char *msg);
+void Dao_logErrorFormat(char *formatAndParams, ...);
 void Dao_logDebug(const char *fctName, const char *msg);
 void Dao_logDebugFormat(char *formatAndParams, ...);
 

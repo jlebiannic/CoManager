@@ -11,6 +11,7 @@ typedef struct PgDao {
 	void (*closeDB)(struct PgDao*);
 	void (*closeDBAndExit)(struct PgDao*);
 	int (*execQuery)(struct PgDao*, const char*);
+	int (*execQueryMultiResults)(struct PgDao*, const char*);
 	void (*getEntry)(struct PgDao*, const char*, const char*, const char*);
 	void (*getNextEntry)(struct PgDao*);
 	int (*hasNextEntry)(struct PgDao*);
@@ -18,9 +19,10 @@ typedef struct PgDao {
 	int (*getFieldValueAsInt)(struct PgDao*, const char*);
 	unsigned int (*newEntry)(struct PgDao*, const char *table);
 	void (*clearResult)(struct PgDao*);
-	void (*beginTrans)(struct PgDao*);
-	void (*endTrans)(struct PgDao*);
+	int (*beginTrans)(struct PgDao*);
+	int (*endTrans)(struct PgDao*);
 	void (*logError)(const char*, const char*);
+	void (*logErrorFormat)(char *formatAndParams, ...);
 	void (*logDebug)(const char*, const char*);
 	void (*logDebugFormat)(const char*, const char*);
 
@@ -30,6 +32,7 @@ typedef struct PgDao {
 	PGconn *conn;
 	PGresult *result; // last result's query
 	int resultCurrentRow;
+	int cursorMode;
 } PgDao;
 
 
@@ -42,6 +45,7 @@ int PgDao_isDBOpen(PgDao*);
 void PgDao_closeDB(PgDao*);
 void PgDao_closeDBAndExit(PgDao*);
 int PgDao_execQuery(PgDao *This, const char *query);
+int PgDao_execQueryMultiResults(PgDao *This, const char *query);
 void PgDao_getEntry(PgDao*, const char*, const char*, const char*);
 void PgDao_getNextEntry(PgDao*);
 int PgDao_hasNextEntry(PgDao*);
@@ -49,8 +53,8 @@ char* PgDao_getFieldValue(PgDao *This, const char *fieldName);
 int PgDao_getFieldValueAsInt(PgDao *This, const char *fieldName);
 unsigned int PgDao_newEntry(PgDao *This, const char *table);
 void PgDao_clearResult(PgDao*);
-void PgDao_beginTrans(PgDao*);
-void PgDao_endTrans(PgDao*);
+int PgDao_beginTrans(PgDao*);
+int PgDao_endTrans(PgDao*);
 
 
 #endif

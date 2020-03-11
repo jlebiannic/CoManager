@@ -35,10 +35,17 @@ int main(void) {
 		dao->getNextEntry(dao);
 	}
 
-	int idx = dao->newEntry(dao, "syslog");
-	printf("idx is %d\n", idx);
-	idx = dao->newEntry(dao, "syslog");
-	printf("idx is %d\n", idx);
+	dao->execQueryMultiResults(dao, "select next from syslog where tx_index > 0 order by tx_index");
+	while (dao->hasNextEntry(dao)) {
+		char *str = dao->getFieldValue(dao, "next");
+		printf("next is %s\n", str);
+		dao->getNextEntry(dao);
+	}
+
+//	int idx = dao->newEntry(dao, "syslog");
+//	printf("idx is %d\n", idx);
+//	idx = dao->newEntry(dao, "syslog");
+//	printf("idx is %d\n", idx);
 
 	dao->closeDB(dao);
 

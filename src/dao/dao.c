@@ -6,6 +6,7 @@
 
 void Dao_init(Dao *This) {
 	This->logError = Dao_logError;
+	This->logErrorFormat = Dao_logErrorFormat;
 	This->logDebug = Dao_logDebug;
 	This->logDebugFormat = Dao_logDebugFormat;
 }
@@ -15,9 +16,19 @@ void Dao_logError(const char *fctName, const char *msg) {
 	fflush(stderr);
 }
 
+void Dao_logErrorFormat(char *formatAndParams, ...) {
+	va_list ap;
+	va_start(ap, formatAndParams);
+	vprintf(formatAndParams, ap);
+	printf("\n");
+	fflush(stdout);
+	va_end(ap);
+}
+
 void Dao_logDebug(const char *fctName, const char *msg) {
 #ifdef DEBUG
 	printf("%s: %s\n", fctName, msg);
+	fflush(stdout);
 #endif
 }
 

@@ -7,12 +7,23 @@
 #include<string.h>
 #include <time.h>
 
+
 static int ID = 1;
+static int ROWS_PER_FETCH = 100; // TODO application parameter
+static const char DECLARE_CURSOR_CMD[] = "DECLARE pgDaoCursor CURSOR FOR";
+static const char FETCH_CMD_FORMAT[] = "FETCH %d IN pgDaoCursor";
+static const char SELECT[] = "SELECT";
+static const char FROM[] = "FROM";
+static const char WHERE[] = "WHERE";
+
 static void PgDao_init(PgDao*);
 static void PgDao_setDefaultSchema(PgDao *This);
 static void PgDao_execQueryParams(PgDao *This, const char *command, int nParams, const Oid *paramTypes, const char *const*paramValues, const int *paramLengths, const int *paramFormats,
 		int resultFormat);
 static void PgDao_addResult(PgDao *This, PGresult *res);
+static int PgDao_fetch(PgDao *This);
+static int PgDao_doCommand(PgDao *This, char *command);
+static void PgDao_closeCursor(PgDao *This);
 
 /******************************************************************************/
 
@@ -22,6 +33,7 @@ static void PgDao_init(PgDao *This) {
 	This->closeDB = PgDao_closeDB;
 	This->closeDBAndExit = PgDao_closeDBAndExit;
 	This->execQuery = PgDao_execQuery;
+	This->execQueryMultiResults = PgDao_execQueryMultiResults;
 	This->getEntry = PgDao_getEntry;
 	This->getNextEntry = PgDao_getNextEntry;
 	This->hasNextEntry = PgDao_hasNextEntry;
@@ -48,6 +60,7 @@ PgDao* PgDao_new() {
 	This->conn = NULL;
 	This->result = NULL;
 	This->resultCurrentRow = -1;
+	This->cursorMode = FALSE;
 	// TODO This.Free = ?;
 	return This;
 }
@@ -77,11 +90,11 @@ int PgDao_openDB(PgDao *This, const char *conninfo) {
 	// TODO exec_at_open (fichier .sqlite_startup: exécution des requêtes au démarrage)
 
 	PgDao_setDefaultSchema(This);
-	This->logDebug("PgDao_openDB", "end");
 	return TRUE;
 }
 
 void PgDao_closeDB(PgDao *This) {
+	This->logDebug("PgDao_closeDB", "start");
 	PgDao_clearResult(This);
 	if(This->conn != NULL) {
 		PQfinish(This->conn);
@@ -90,11 +103,13 @@ void PgDao_closeDB(PgDao *This) {
 }
 
 void PgDao_closeDBAndExit(PgDao *This) {
+	This->logDebug("PgDao_closeDBAndExit", "start");
 	PQfinish(This->conn);
 	exit(1);
 }
 
 int PgDao_execQuery(PgDao *This, const char *query) {
+	This->logDebug("PgDao_execQuery", "start");
 	int res = FALSE;
 	if (This->openDB(This, NULL)) {
 		PgDao_addResult(This, PQexec(This->conn, query));
@@ -109,14 +124,34 @@ int PgDao_execQuery(PgDao *This, const char *query) {
 	return res;
 }
 
+int PgDao_execQueryMultiResults(PgDao *This, const char *query) {
+	This->logDebug("PgDao_execQueryMultiResults", "start");
+	int res = FALSE;
+	if (This->beginTrans(This)) {
+		if (This->openDB(This, NULL)) {
+			char *cursorQuery = allocStr("%s %s", DECLARE_CURSOR_CMD, query);
+			sprintf(cursorQuery, "%s %s", DECLARE_CURSOR_CMD, query);
+			PgDao_addResult(This, PQexec(This->conn, cursorQuery));
+			free(cursorQuery);
+			if (PQresultStatus(This->result) != PGRES_COMMAND_OK) {
+				This->logError("PgDao_execQueryMultiResults declare cursor failed", PQerrorMessage(This->conn));
+				PgDao_clearResult(This);
+			} else {
+				This->cursorMode = TRUE;
+				if (PgDao_fetch(This) >= 0) {
+					res = TRUE;
+				}
+			}
+		}
+	}
+	return res;
+}
 
 void PgDao_getEntry(PgDao *This, const char *table, const char *filter, const char *fieldnames) {
-	const char select[] = "SELECT";
-	const char from[] = "FROM";
-	const char where[] = "WHERE";
+	This->logDebug("PgDao_getEntry", "start");
 
-	char *query = malloc(strlen(select) + strlen(fieldnames) + strlen(from) + strlen(table) + strlen(where) + strlen(filter) + 7);
-	sprintf(query, "%s %s %s %s %s %s", select, fieldnames, from, table, where, filter);
+	char *query = malloc(sizeof(SELECT) + strlen(fieldnames) + 1 + sizeof(FROM) + strlen(table) + 1 + sizeof(WHERE) + strlen(filter) + 1 + 7);
+	sprintf(query, "%s %s %s %s %s %s", SELECT, fieldnames, FROM, table, WHERE, filter);
 	PgDao_addResult(This, PQexec(This->conn, query));
 	free(query);
 
@@ -127,23 +162,29 @@ void PgDao_getEntry(PgDao *This, const char *table, const char *filter, const ch
 }
 
 int PgDao_hasNextEntry(PgDao *This) {
-	if (This->resultCurrentRow != -1 && This->resultCurrentRow <= PQntuples(This->result) - 1) {
+	This->logDebug("PgDao_hasNextEntry", "start");
+	if ((This->resultCurrentRow != -1 && This->resultCurrentRow <= PQntuples(This->result) - 1) || PgDao_fetch(This) > 0) {
 		return TRUE;
+	} else {
+		PgDao_closeCursor(This);
+		return FALSE;
 	}
-	return FALSE;
 }
 
 void PgDao_getNextEntry(PgDao *This) {
+	This->logDebug("PgDao_getNextEntry", "start");
 	if (This->hasNextEntry(This)) {
 		This->resultCurrentRow++;
 	}
 }
 
 int PgDao_getFieldValueAsInt(PgDao *This, const char *fieldName) {
+	This->logDebug("PgDao_getFieldValueAsInt", "start");
 	return strtol(This->getFieldValue(This, fieldName), (char**) NULL, 10);
 }
 
 char* PgDao_getFieldValue(PgDao *This, const char *fieldName) {
+	This->logDebug("PgDao_getFieldValue", "start");
 	int nFields;
 	int i;
 	int numField = -1;
@@ -203,47 +244,32 @@ unsigned int PgDao_newEntry(PgDao *This, const char *table) {
 
 		PgDao_clearResult(This);
 	}
-	This->logDebug("PgDao_addEntry", "end");
 	return idx;
 }
 
-void PgDao_beginTrans(PgDao *This) {
+int PgDao_beginTrans(PgDao *This) {
 	This->logDebug("PgDao_beginTrans", "start");
-	PGresult *res;
-	res = PQexec(This->conn, "BEGIN");
-	if (PQresultStatus(res) != PGRES_COMMAND_OK) {
-		This->logError("BEGIN command failed", PQerrorMessage(This->conn));
-		PQclear(res);
-		This->closeDB(This);
-	}
-	PQclear(res);
-	This->logDebug("PgDao_beginTrans", "end");
+	return PgDao_doCommand(This, "BEGIN");
 }
 
-void PgDao_endTrans(PgDao *This) {
+int PgDao_endTrans(PgDao *This) {
 	This->logDebug("PgDao_endTransaction", "start");
 	/* termine la transaction */
-	PGresult *res;
-	res = PQexec(This->conn, "END");
-	if (PQresultStatus(res) != PGRES_COMMAND_OK) {
-		fprintf(stderr, "END command failed: %s", PQerrorMessage(This->conn));
-		PQclear(res);
-		This->closeDB(This);
-	}
-	PQclear(res);
-	This->logDebug("PgDao_endTransaction", "end");
+	return PgDao_doCommand(This, "END");
 }
 
 int PgDao_isDBOpen(PgDao *This) {
+	This->logDebug("PgDao_isDBOpen", "start");
 	return This->conn != NULL ? TRUE : FALSE;
 }
 
 void PgDao_clearResult(PgDao *This) {
+	This->logDebug("PgDao_clearResult", "start");
 	if (This->result != NULL) {
 		PQclear(This->result);
 		This->result = NULL;
-		This->resultCurrentRow = -1;
 	}
+	This->resultCurrentRow = -1;
 }
 
 /******************************************************************************/
@@ -256,12 +282,12 @@ static void PgDao_setDefaultSchema(PgDao *This) {
 		PgDao_clearResult(This);
 		This->closeDBAndExit(This);
 	}
-	This->logDebug("PgDao_setDefaultSchema", "end");
 	PgDao_clearResult(This);
 }
 
 static void PgDao_execQueryParams(PgDao *This, const char *command, int nParams, const Oid *paramTypes, const char *const*paramValues, const int *paramLengths, const int *paramFormats,
 		int resultFormat) {
+	This->logDebug("PgDao_execQueryParams", "start");
 	PgDao_addResult(This, PQexecParams(This->conn, command, nParams, paramTypes, paramValues, paramLengths, paramFormats, resultFormat));
 
 	if (PQresultStatus(This->result) != PGRES_TUPLES_OK) {
@@ -271,9 +297,51 @@ static void PgDao_execQueryParams(PgDao *This, const char *command, int nParams,
 }
 
 static void PgDao_addResult(PgDao *This, PGresult *res) {
+	This->logDebug("PgDao_addResult", "start");
 	PgDao_clearResult(This);
 	This->result = res;
 	This->resultCurrentRow = 0;
 }
 
 
+static int PgDao_fetch(PgDao *This) {
+	This->logDebug("PgDao_fetch", "start");
+	int res = -1;
+	if (This->cursorMode) {
+		PgDao_clearResult(This);
+		char *fetchQuery = allocStr(FETCH_CMD_FORMAT, ROWS_PER_FETCH);
+		sprintf(fetchQuery, FETCH_CMD_FORMAT, ROWS_PER_FETCH);
+		PgDao_addResult(This, PQexec(This->conn, fetchQuery));
+		free(fetchQuery);
+		if (PQresultStatus(This->result) != PGRES_TUPLES_OK) {
+			This->logError("PgDao_execQueryMultiResults fetch failed", PQerrorMessage(This->conn));
+			PgDao_clearResult(This);
+		} else {
+			res = PQntuples(This->result);
+		}
+	}
+	return res;
+}
+
+static int PgDao_doCommand(PgDao *This, char *command) {
+	This->logDebug("PgDao_doCommand", "start");
+	PGresult *res;
+	res = PQexec(This->conn, command);
+	if (PQresultStatus(res) != PGRES_COMMAND_OK) {
+		This->logErrorFormat("doCommand: %s failed", command, PQerrorMessage(This->conn));
+		PQclear(res);
+		return FALSE;
+	}
+	PQclear(res);
+	return TRUE;
+}
+
+static void PgDao_closeCursor(PgDao *This) {
+	if (This->cursorMode) {
+		This->logDebug("PgDao_closeCursor", "start");
+		PgDao_clearResult(This);
+		PgDao_doCommand(This, "CLOSE pgDaoCursor");
+		This->endTrans(This);
+		This->cursorMode = FALSE;
+	}
+}
