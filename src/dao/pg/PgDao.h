@@ -12,6 +12,7 @@ typedef struct PgDao {
 	void (*closeDBAndExit)(struct PgDao*);
 	int (*execQuery)(struct PgDao*, const char*);
 	int (*execQueryMultiResults)(struct PgDao*, const char*);
+	int (*execQueryParamsMultiResults)(struct PgDao*, const char*, int);
 	void (*getEntry)(struct PgDao*, const char*, const char*, const char*);
 	void (*getNextEntry)(struct PgDao*);
 	int (*hasNextEntry)(struct PgDao*);
@@ -46,6 +47,7 @@ void PgDao_closeDB(PgDao*);
 void PgDao_closeDBAndExit(PgDao*);
 int PgDao_execQuery(PgDao *This, const char *query);
 int PgDao_execQueryMultiResults(PgDao *This, const char *query);
+int PgDao_execQueryParamsMultiResults(PgDao *This, const char *queryFormat, int value);
 void PgDao_getEntry(PgDao*, const char*, const char*, const char*);
 void PgDao_getNextEntry(PgDao*);
 int PgDao_hasNextEntry(PgDao*);

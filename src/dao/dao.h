@@ -10,6 +10,7 @@ typedef struct Dao {
 	void (*closeDBAndExit)(struct Dao*);
 	int (*execQuery)(struct Dao*, const char*);
 	int (*execQueryMultiResults)(struct Dao*, const char*);
+	int (*execQueryParamsMultiResults)(struct Dao*, const char*, int);
 	void (*getEntry)(struct Dao*, const char*, const char*, const char*);
 	void (*getNextEntry)(struct Dao*);
 	int (*hasNextEntry)(struct Dao*);

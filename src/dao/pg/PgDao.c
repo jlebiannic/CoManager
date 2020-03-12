@@ -34,6 +34,7 @@ static void PgDao_init(PgDao *This) {
 	This->closeDBAndExit = PgDao_closeDBAndExit;
 	This->execQuery = PgDao_execQuery;
 	This->execQueryMultiResults = PgDao_execQueryMultiResults;
+	This->execQueryParamsMultiResults = PgDao_execQueryParamsMultiResults;
 	This->getEntry = PgDao_getEntry;
 	This->getNextEntry = PgDao_getNextEntry;
 	This->hasNextEntry = PgDao_hasNextEntry;
@@ -147,6 +148,37 @@ int PgDao_execQueryMultiResults(PgDao *This, const char *query) {
 	return res;
 }
 
+// FIXME For Test
+int PgDao_execQueryParamsMultiResults(PgDao *This, const char *queryFormat, int value) {
+	This->logDebug("PgDao_execQueryMultiResults", "start");
+	int res = FALSE;
+	if (This->beginTrans(This)) {
+		if (This->openDB(This, NULL)) {
+
+			const int paramLengths[] = { sizeof(int) };
+			char valueStr[10];
+			sprintf(valueStr, "%d", value);
+			const char *const paramValues[] = { valueStr };
+			const int paramFormats[] = { 0 };
+
+			char *cursorQuery = allocStr("%s %s", DECLARE_CURSOR_CMD, queryFormat);
+			sprintf(cursorQuery, "%s %s", DECLARE_CURSOR_CMD, queryFormat);
+			PgDao_execQueryParams(This, cursorQuery, 1, NULL, paramValues, paramLengths, paramFormats, 0);
+			free(cursorQuery);
+			if (PQresultStatus(This->result) != PGRES_COMMAND_OK) {
+				This->logError("PgDao_execQueryMultiResults declare cursor failed", PQerrorMessage(This->conn));
+				PgDao_clearResult(This);
+			} else {
+				This->cursorMode = TRUE;
+				if (PgDao_fetch(This) >= 0) {
+					res = TRUE;
+				}
+			}
+		}
+	}
+	return res;
+}
+
 void PgDao_getEntry(PgDao *This, const char *table, const char *filter, const char *fieldnames) {
 	This->logDebug("PgDao_getEntry", "start");
 
@@ -228,7 +260,7 @@ unsigned int PgDao_newEntry(PgDao *This, const char *table) {
 		const char *const paramValues[] = { strTime, strTime };
 		const int paramFormats[] = { 0, 0 };
 
-		query = malloc(strlen(insertInto) + strlen(table) + strlen(values) + 3);
+		query = allocStr("%s %s %s", insertInto, table, values);
 		sprintf(query, "%s %s %s", insertInto, table, values);
 
 		This->logDebugFormat("query: %s", query);
@@ -290,7 +322,7 @@ static void PgDao_execQueryParams(PgDao *This, const char *command, int nParams,
 	This->logDebug("PgDao_execQueryParams", "start");
 	PgDao_addResult(This, PQexecParams(This->conn, command, nParams, paramTypes, paramValues, paramLengths, paramFormats, resultFormat));
 
-	if (PQresultStatus(This->result) != PGRES_TUPLES_OK) {
+	if (PQresultStatus(This->result) != PGRES_TUPLES_OK && PQresultStatus(This->result) != PGRES_COMMAND_OK) {
 		This->logError("PgDao_execQueryParams failed", PQerrorMessage(This->conn));
 		PgDao_clearResult(This);
 	}

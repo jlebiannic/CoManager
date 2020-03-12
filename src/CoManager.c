@@ -20,28 +20,28 @@ int main(void) {
 	Dao *dao = daoFactory_create(1);
 	dao->openDB(dao, NULL);
 
-	dao->getEntry(dao, "syslog", "tx_index > 0", "NEXT");
+//	dao->getEntry(dao, "syslog", "tx_index > 0", "NEXT");
+//
+//	while (dao->hasNextEntry(dao)) {
+//		char *str = dao->getFieldValue(dao, "next");
+//		printf("next is %s\n", str);
+//		dao->getNextEntry(dao);
+//	}
+//
+//	dao->execQuery(dao, "select next from syslog where tx_index > 0");
+//	while (dao->hasNextEntry(dao)) {
+//		char *str = dao->getFieldValue(dao, "next");
+//		printf("next is %s\n", str);
+//		dao->getNextEntry(dao);
+//	}
 
+	dao->execQueryParamsMultiResults(dao, "select next from syslog where tx_index > $1 order by tx_index", 0);
 	while (dao->hasNextEntry(dao)) {
 		char *str = dao->getFieldValue(dao, "next");
 		printf("next is %s\n", str);
 		dao->getNextEntry(dao);
 	}
-
-	dao->execQuery(dao, "select next from syslog where tx_index > 0");
-	while (dao->hasNextEntry(dao)) {
-		char *str = dao->getFieldValue(dao, "next");
-		printf("next is %s\n", str);
-		dao->getNextEntry(dao);
-	}
-
-	dao->execQueryMultiResults(dao, "select next from syslog where tx_index > 0 order by tx_index");
-	while (dao->hasNextEntry(dao)) {
-		char *str = dao->getFieldValue(dao, "next");
-		printf("next is %s\n", str);
-		dao->getNextEntry(dao);
-	}
-
+//
 //	int idx = dao->newEntry(dao, "syslog");
 //	printf("idx is %d\n", idx);
 //	idx = dao->newEntry(dao, "syslog");
