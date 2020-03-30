@@ -14,7 +14,6 @@
 #endif
 
 char* allocStr(const char *formatAndParams, ...);
-char* allocStr2(const char *formatAndParams, ...);
 char* uitoa(unsigned int uint);
 
 #endif /* COMMONS_COMMONS_H_ */

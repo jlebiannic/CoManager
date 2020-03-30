@@ -136,7 +136,6 @@ int PgDao_execQueryMultiResults(PgDao *This, const char *query) {
 	if (This->beginTrans(This)) {
 		if (This->openDB(This, NULL)) {
 			char *cursorQuery = allocStr("%s %s", DECLARE_CURSOR_CMD, query);
-			sprintf(cursorQuery, "%s %s", DECLARE_CURSOR_CMD, query);
 			PgDao_addResult(This, PQexec(This->conn, cursorQuery));
 			free(cursorQuery);
 			if (PQresultStatus(This->result) != PGRES_COMMAND_OK) {
@@ -176,7 +175,6 @@ int PgDao_execQueryParamsMultiResults(PgDao *This, const char *queryFormat, int 
 			const int paramFormats[] = { 0 };
 
 			char *cursorQuery = allocStr("%s %s", DECLARE_CURSOR_CMD, queryFormat);
-			sprintf(cursorQuery, "%s %s", DECLARE_CURSOR_CMD, queryFormat);
 			p_execQueryParams(This, cursorQuery, 1, NULL, paramValues, paramLengths, paramFormats, 0);
 			free(cursorQuery);
 			if (PQresultStatus(This->result) != PGRES_COMMAND_OK) {
@@ -305,7 +303,6 @@ unsigned int PgDao_newEntry(PgDao *This, const char *table) {
 		const int paramFormats[] = { 0, 0 };
 
 		query = allocStr("%s %s %s", insertInto, table, values);
-		sprintf(query, "%s %s %s", insertInto, table, values);
 
 		This->logDebugFormat("query: %s", query);
 
@@ -390,7 +387,6 @@ static int PgDao_fetch(PgDao *This) {
 	if (This->cursorMode) {
 		PgDao_clearResult(This);
 		char *fetchQuery = allocStr(FETCH_CMD_FORMAT, ROWS_PER_FETCH);
-		sprintf(fetchQuery, FETCH_CMD_FORMAT, ROWS_PER_FETCH);
 		PgDao_addResult(This, PQexec(This->conn, fetchQuery));
 		free(fetchQuery);
 		if (PQresultStatus(This->result) != PGRES_TUPLES_OK) {
