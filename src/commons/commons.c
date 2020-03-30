@@ -1,6 +1,8 @@
 #include<stdio.h>
 #include <stdarg.h>
 #include <stdlib.h>
+#include <string.h>
+
 // FIXME move these functions to a real commons lib
 char* allocStr(const char *formatAndParams, ...) {
 	va_list ap;
@@ -35,9 +37,9 @@ char* uitoa(unsigned int uint) {
 	return str;
 }
 
-void freeArray(char **array, int nb) {
-	for (int i = 0; i < nb; i++) {
+void freeArray(char *array[], int nb) {
+	int i=0;
+	for (i = 0; i < nb; i++) {
 		free(array[i]);
 	}
-	free(array);
 }

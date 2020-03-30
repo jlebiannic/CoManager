@@ -329,8 +329,8 @@ int PgDao_updateEntries(PgDao *This, const char *table, const char *fields[], co
 	char *updateSet = allocStr("UPDATE %s SET", table);
 	char *updateElems = NULL;
 	char *updateFilter = allocStr("WHERE %s", filter);
-
-	for (int i = 0; i < nb; i++) {
+        int i=0;
+	for (i = 0; i < nb; i++) {
 		char *tpl = NULL;
 		if (i == nb - 1) {
 			tpl = &updateElemTpl[0];
