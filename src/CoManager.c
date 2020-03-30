@@ -64,6 +64,21 @@ int main(void) {
 		dao->getNextEntry(dao);
 	}
 
+	char *fields[2] = { "autack", "info" };
+	char *values3[2] = { "a updated", "i updated" };
+	dao->updateEntries(dao, "syslog", (const char**) fields, (const char**) values3, 2, "autack='0'");
+
+	const char *values4[1] = { "a updated" };
+	dao->execQueryParams(dao, "select info, autack from syslog where autack=$1 order by tx_index", values4, 1);
+	while (dao->hasNextEntry(dao)) {
+		char *info = dao->getFieldValueByNum(dao, 0);
+		printf("$info is %s\n", info);
+		char *autack = dao->getFieldValueByNum(dao, 1);
+		printf("$autack is %s\n", autack);
+
+		dao->getNextEntry(dao);
+	}
+
 	int idx = dao->newEntry(dao, "syslog");
 	printf("idx is %d\n", idx);
 //	idx = dao->newEntry(dao, "syslog");

@@ -46,6 +46,7 @@ static void PgDao_init(PgDao *This) {
 	This->getFieldValueAsIntByNum = PgDao_getFieldValueAsIntByNum;
 	This->getFieldValueAsDoubleByNum = PgDao_getFieldValueAsDoubleByNum;
 	This->newEntry = PgDao_newEntry;
+	This->updateEntries = PgDao_updateEntries;
 	This->clearResult = PgDao_clearResult;
 	This->beginTrans = PgDao_beginTrans;
 	This->endTrans = PgDao_endTrans;
@@ -318,6 +319,42 @@ unsigned int PgDao_newEntry(PgDao *This, const char *table) {
 		PgDao_clearResult(This);
 	}
 	return idx;
+}
+
+int PgDao_updateEntries(PgDao *This, const char *table, const char *fields[], const char *values[], int nb, const char *filter) {
+	int res;
+
+	char updateElemTpl[] = "%s=$%d";
+	char updateElemWithCommaTpl[] = "%s=$%d,";
+	char *updateSet = allocStr("UPDATE %s SET", table);
+	char *updateElems = NULL;
+	char *updateFilter = allocStr("WHERE %s", filter);
+
+	for (int i = 0; i < nb; i++) {
+		char *tpl = NULL;
+		if (i == nb - 1) {
+			tpl = &updateElemTpl[0];
+		} else {
+			tpl = &updateElemWithCommaTpl[0];
+		}
+
+		if (updateElems == NULL) {
+			updateElems = allocStr(tpl, fields[i], i + 1);
+		} else {
+			updateElems = reallocStr(updateElems, tpl, fields[i], i + 1);
+		}
+	}
+
+	char *query = allocStr("%s %s %s", updateSet, updateElems, updateFilter);
+	printf("update query = %s\n", query);
+	res = This->execQueryParams(This, query, values, nb);
+
+	free(updateSet);
+	free(updateElems);
+	free(updateFilter);
+	free(query);
+
+	return res;
 }
 
 int PgDao_beginTrans(PgDao *This) {
