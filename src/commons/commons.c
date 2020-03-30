@@ -10,7 +10,7 @@ char* allocStr(const char *formatAndParams, ...) {
 	return malloc(size + 1);
 }
 
-static char* allocStr2(const char *formatAndParams, ...) {
+char* allocStr2(const char *formatAndParams, ...) {
 	va_list ap;
 	va_start(ap, formatAndParams);
 	int size = vsnprintf(NULL, 0, formatAndParams, ap);
