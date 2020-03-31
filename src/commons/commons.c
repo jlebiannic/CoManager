@@ -43,3 +43,26 @@ void freeArray(char *array[], int nb) {
 		free(array[i]);
 	}
 }
+
+char* arrayJoin(const char *fields[], int nb, char *sep) {
+	int i = 0;
+	char *str = NULL;
+	char *res = NULL;
+	for (i = 0; i < nb; i++) {
+		if (str == NULL) {
+			str = (char*) malloc(strlen(fields[i]) + 1);
+			strcpy(str, fields[i]);
+			res = str;
+		} else {
+			int len = strlen(str);
+			str = str + len;
+			str = (char*) realloc(str, len + strlen(fields[i]) + 1);
+			strcpy(str, fields[i]);
+		}
+
+		if (i < nb - 1) {
+			strcat(str, sep);
+		}
+	}
+	return res;
+}

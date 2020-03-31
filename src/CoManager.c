@@ -20,14 +20,6 @@ int main(void) {
 	Dao *dao = daoFactory_create(1);
 	dao->openDB(dao, NULL);
 
-	dao->getEntry(dao, "syslog", "tx_index > 0", "NEXT");
-
-	while (dao->hasNextEntry(dao)) {
-		char *str = dao->getFieldValue(dao, "next");
-		printf("next is %s\n", str);
-		dao->getNextEntry(dao);
-	}
-
 	dao->execQuery(dao, "select next from syslog where tx_index > 0");
 	while (dao->hasNextEntry(dao)) {
 		char *str = dao->getFieldValue(dao, "next");
@@ -35,15 +27,18 @@ int main(void) {
 		dao->getNextEntry(dao);
 	}
 
-	dao->execQueryParamsMultiResults(dao, "select next from syslog where tx_index > $1 order by tx_index", 0);
+	// dao->execQueryParamsMultiResults(dao, "select next from syslog where tx_index > $1 order by tx_index", 0);
+	char *fields0[1] = { "next" };
+	char *values0[1] = { "0" };
+	dao->getEntries(dao, "syslog", (const char**) fields0, 1, "tx_index > $1 order by tx_index", (const char**) values0, 1);
 	while (dao->hasNextEntry(dao)) {
 		char *str = dao->getFieldValue(dao, "next");
 		printf("#next is %s\n", str);
 		dao->getNextEntry(dao);
 	}
 
-	const char *values[1] = { "2" };
-	dao->execQueryParams(dao, "select next from syslog where tx_index = $1 order by tx_index", values, 1);
+	const char *values1[1] = { "2" };
+	dao->execQueryParams(dao, "select next from syslog where tx_index = $1 order by tx_index", values1, 1);
 	while (dao->hasNextEntry(dao)) {
 		char *str = dao->getFieldValue(dao, "next");
 		printf("*next is %s\n", str);
@@ -64,9 +59,9 @@ int main(void) {
 		dao->getNextEntry(dao);
 	}
 
-	char *fields[2] = { "autack", "info" };
+	char *fields3[2] = { "autack", "info" };
 	char *values3[2] = { "a updated", "i updated" };
-	dao->updateEntries(dao, "syslog", (const char**) fields, (const char**) values3, 2, "autack='0'");
+	dao->updateEntries(dao, "syslog", (const char**) fields3, (const char**) values3, 2, "autack='0'");
 
 	const char *values4[1] = { "a updated" };
 	dao->execQueryParams(dao, "select info, autack from syslog where autack=$1 order by tx_index", values4, 1);

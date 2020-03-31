@@ -17,5 +17,6 @@ char* allocStr(const char *formatAndParams, ...);
 char* reallocStr(char *str, const char *formatAndParams, ...);
 char* uitoa(unsigned int uint);
 void freeArray(char **array, int nb);
+char* arrayJoin(const char *fields[], int nb, char *sep);
 
 #endif /* COMMONS_COMMONS_H_ */
