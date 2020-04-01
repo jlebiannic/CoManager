@@ -8,6 +8,8 @@
 #ifndef COMMONS_COMMONS_H_
 #define COMMONS_COMMONS_H_
 
+#include <time.h>
+
 #ifndef TRUE
 #define FALSE 0
 #define TRUE  1

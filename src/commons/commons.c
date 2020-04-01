@@ -2,6 +2,7 @@
 #include <stdarg.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 
 // FIXME move these functions to a real commons lib
 char* allocStr(const char *formatAndParams, ...) {
