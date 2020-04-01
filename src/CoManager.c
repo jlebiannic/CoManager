@@ -13,6 +13,7 @@
 #include <time.h>
 
 #include "commons/daoFactory.h"
+#include "commons/commons.h"
 
 int main(void) {
 	puts("Main start");
@@ -30,7 +31,7 @@ int main(void) {
 	// dao->execQueryParamsMultiResults(dao, "select next from syslog where tx_index > $1 order by tx_index", 0);
 	char *fields0[1] = { "next" };
 	char *values0[1] = { "0" };
-	dao->getEntries(dao, "syslog", (const char**) fields0, 1, "tx_index > $1 order by tx_index", (const char**) values0, 1);
+	dao->getEntries(dao, "syslog", (const char**) fields0, 1, "tx_index > $ order by tx_index", (const char**) values0);
 	while (dao->hasNextEntry(dao)) {
 		char *str = dao->getFieldValue(dao, "next");
 		printf("#next is %s\n", str);
@@ -74,12 +75,30 @@ int main(void) {
 		dao->getNextEntry(dao);
 	}
 
-	int idx = dao->newEntry(dao, "syslog");
-	printf("idx is %d\n", idx);
+//	int idx = dao->newEntry(dao, "syslog");
+//	printf("idx is %d\n", idx);
 //	idx = dao->newEntry(dao, "syslog");
 //	printf("idx is %d\n", idx);
 
 	dao->closeDB(dao);
+
+	char **arr = NULL;
+	arr = (char**) malloc(sizeof(char**));
+
+	int cpt = 0;
+	arrayAddElement(arr, "test", cpt, FALSE, TRUE);
+	cpt++;
+	arrayAddIntElement(arr, 123, cpt, TRUE);
+	cpt++;
+	arrayAddDoubleElement(arr, 456.789, cpt, TRUE);
+	cpt++;
+	time_t timestamp = time( NULL);
+	arrayAddTimeElement(arr, timestamp, cpt, TRUE);
+
+	int i = 0;
+	for (i = 0; i <= cpt; i++) {
+		printf("arr[%d]=%s\n", i, arr[i]);
+	}
 
 	// factoryEnd();
 

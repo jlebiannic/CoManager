@@ -37,6 +37,14 @@ char* uitoa(unsigned int uint) {
 	return str;
 }
 
+char* inttoa(int i) {
+	char *str = NULL;
+	const int size = snprintf(NULL, 0, "%d", i);
+	str = (char*) malloc(size + 1);
+	sprintf(str, "%d", i);
+	return str;
+}
+
 void freeArray(char *array[], int nb) {
 	int i=0;
 	for (i = 0; i < nb; i++) {
@@ -65,4 +73,37 @@ char* arrayJoin(const char *fields[], int nb, char *sep) {
 		}
 	}
 	return res;
+}
+
+static void p_arrayAddElement(char **array, char *element, int idx, int allocArray) {
+	if (allocArray) {
+		*(array + idx) = (char*) malloc(sizeof(char*));
+	}
+	array[idx] = element;
+}
+
+void arrayAddElement(char **array, char *element, int idx, int allocElement, int allocArray) {
+	char *newElem = NULL;
+	if (allocElement) {
+		newElem = malloc((strlen(element) + 1) * sizeof(char));
+		strcpy(newElem, element);
+	} else {
+		newElem = element;
+	}
+	p_arrayAddElement(array, newElem, idx, allocArray);
+}
+
+void arrayAddTimeElement(char **array, time_t element, int idx, int allocArray) {
+	char *str = allocStr("%ld", element);
+	p_arrayAddElement(array, str, idx, allocArray);
+}
+
+void arrayAddDoubleElement(char **array, double element, int idx, int allocArray) {
+	char *str = allocStr("%lf", element);
+	p_arrayAddElement(array, str, idx, allocArray);
+}
+
+void arrayAddIntElement(char **array, int element, int idx, int allocArray) {
+	char *str = allocStr("%d", element);
+	p_arrayAddElement(array, str, idx, allocArray);
 }

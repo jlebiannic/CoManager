@@ -6,7 +6,7 @@
 #include<stdio.h>
 #include<string.h>
 #include <time.h>
-
+#include <ctype.h>
 
 static int ID = 1;
 static int ROWS_PER_FETCH = 100; // TODO application parameter
@@ -20,6 +20,7 @@ static void PgDao_addResult(PgDao *This, PGresult *res);
 static int PgDao_fetch(PgDao *This);
 static int PgDao_doCommand(PgDao *This, char *command);
 static void PgDao_closeCursor(PgDao *This);
+static char* p_toPgStx(const char *str, int *nbValuesFound);
 
 /******************************************************************************/
 
@@ -158,10 +159,21 @@ int PgDao_execQueryParams(PgDao *This, const char *queryFormat, const char *para
 	return res;
 }
 
-int PgDao_getEntries(PgDao *This, const char *table, const char *fields[], int nbFields, const char *filter, const char *values[], int nbValues) {
+/**
+ * Execute query with internal cursor
+ * 	table
+ * 	fields
+ * 	nbFields
+ * 	filter: can be c1=$ or c1=$1
+ * 	values: values for "$" in filter
+ * */
+int PgDao_getEntries(PgDao *This, const char *table, const char *fields[], int nbFields, const char *filter, const char *values[]) {
 	This->logDebug("PgDao_execQueryParamsMultiResults", "start");
 	char *selectFields = arrayJoin(fields, nbFields, ",");
-	char *query = allocStr("Select %s from %s where %s", selectFields, table, filter);
+	int nbValues = 0;
+	char *filterWithPgStx = filter != NULL && strlen(filter) > 0 ? p_toPgStx(filter, &nbValues) : "";
+	char *query = allocStr("Select %s from %s where %s", selectFields, table, filterWithPgStx);
+	This->logDebugFormat("[getEntries]select query = %s\n", query);
 	int res = This->execQueryParamsMultiResults(This, query, values, nbValues);
 	free(query);
 	free(selectFields);
@@ -286,7 +298,7 @@ unsigned int PgDao_newEntry(PgDao *This, const char *table) {
 		const char *const paramValues[] = { strTime, strTime };
 		//const int paramFormats[] = { 0, 0 };
 		query = allocStr("%s %s %s", insertInto, table, values);
-		This->logDebugFormat("query: %s", query);
+		This->logDebugFormat("[newEntry]query: %s", query);
 		p_execQueryParams(This, query, paramValues, 2);
 		free(query);
 
@@ -308,7 +320,7 @@ int PgDao_updateEntries(PgDao *This, const char *table, const char *fields[], co
 	char updateElemWithCommaTpl[] = "%s=$%d,";
 	char *updateSet = allocStr("UPDATE %s SET", table);
 	char *updateElems = NULL;
-	char *updateFilter = allocStr("WHERE %s", filter);
+	char *updateFilter = filter != NULL && strlen(filter) > 0 ? allocStr("WHERE %s", filter) : "";
         int i=0;
 	for (i = 0; i < nb; i++) {
 		char *tpl = NULL;
@@ -326,7 +338,7 @@ int PgDao_updateEntries(PgDao *This, const char *table, const char *fields[], co
 	}
 
 	char *query = allocStr("%s %s %s", updateSet, updateElems, updateFilter);
-	printf("update query = %s\n", query);
+	This->logDebugFormat("update query = %s\n", query);
 	res = This->execQueryParams(This, query, values, nb);
 
 	free(updateSet);
@@ -436,6 +448,42 @@ static void PgDao_closeCursor(PgDao *This) {
 		This->endTrans(This);
 		This->cursorMode = FALSE;
 	}
+}
+
+/**
+ * Transform str to PostgreSQL synthax.
+ * Ex: select * from t where c1=$ and c2>$
+ *     become
+ *     select * from t where c1=$1 and c2>$2
+ * */
+static char* p_toPgStx(const char *str, int *nbValuesFound) {
+	char *strRes = NULL;
+	int len = strlen(str) * 2;
+	int currentResLen = len;
+	strRes = (char*) malloc(len + 1);
+	strcpy(strRes, "");
+	int cpt = 1;
+	char *varNum = NULL;
+	while (*str != '\0') {
+		strncat(strRes, str, 1);
+		if (*str == '$') {
+			// verify not $1 (for example) but $ only
+			if (!isdigit((int) *(str + 1))) {
+				varNum = inttoa(cpt);
+				if (strlen(strRes) + strlen(varNum) > currentResLen) {
+					currentResLen = currentResLen + len;
+					strRes = (char*) realloc(strRes, currentResLen + 1);
+				}
+				strcat(strRes, varNum);
+				free(varNum);
+
+			}
+			cpt++;
+		}
+		str++;
+	}
+	*nbValuesFound = cpt - 1;
+	return strRes;
 }
 
 
