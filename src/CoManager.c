@@ -21,6 +21,7 @@ int main(void) {
 	Dao *dao = daoFactory_create(1);
 	dao->openDB(dao, NULL);
 
+
 	dao->execQuery(dao, "select next from syslog where tx_index > 0");
 	while (dao->hasNextEntry(dao)) {
 		char *str = dao->getFieldValue(dao, "next");
