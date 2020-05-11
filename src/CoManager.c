@@ -18,8 +18,6 @@
 int main(void) {
 	puts("Main start");
 
-	test("test extern");
-
 	Dao *dao = daoFactory_create(1);
 	dao->openDB(dao, NULL);
 
