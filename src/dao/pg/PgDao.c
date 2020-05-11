@@ -370,9 +370,11 @@ int PgDao_createTable(PgDao *This, const char *table, const char *fields[], cons
 			tpl = &typedFieldTplWithComma[0];
 		}
 
-		char *type = types[i];
-		if (numSpecialField == nb) {
-			typedFields = allocStr(tpl, fields[i], "SERIAL PRIMARY KEY");
+		char *type = NULL;
+		if (numSpecialField == i) {
+			type = allocStr("%s", "SERIAL PRIMARY KEY");
+		} else {
+			type = allocStr("%s", types[i]);
 		}
 
 		if (typedFields == NULL) {
@@ -380,6 +382,7 @@ int PgDao_createTable(PgDao *This, const char *table, const char *fields[], cons
 		} else {
 			typedFields = reallocStr(typedFields, tpl, fields[i], type);
 		}
+		free(type);
 	}
 
 	char *query = allocStr(createTableTpl, table, typedFields);
