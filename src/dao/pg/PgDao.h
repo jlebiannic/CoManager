@@ -26,6 +26,7 @@ typedef struct PgDao {
 	int (*getFieldValueAsIntByNum)(struct PgDao*, int);
 	double (*getFieldValueAsDoubleByNum)(struct PgDao*, int);
 	int (*createTable)(struct PgDao*, const char*, const char*[], const char*[], int nb, int numSpecialField);
+	int (*createIndex)(struct PgDao*, const char*, const char*, const char*[], int nb);
 	void (*clearResult)(struct PgDao*);
 	int (*beginTrans)(struct PgDao*);
 	int (*endTrans)(struct PgDao*);
@@ -68,6 +69,7 @@ char* PgDao_getFieldValueByNum(PgDao *This, int numField);
 int PgDao_getFieldValueAsIntByNum(PgDao *This, int numField);
 double PgDao_getFieldValueAsDoubleByNum(PgDao *This, int numField);
 int PgDao_createTable(PgDao *This, const char *table, const char *fields[], const char *types[], int nb, int numSpecialField);
+int PgDao_createIndex(PgDao *This, const char *table, const char *index, const char *fields[], int nb);
 void PgDao_clearResult(PgDao*);
 int PgDao_beginTrans(PgDao*);
 int PgDao_endTrans(PgDao*);

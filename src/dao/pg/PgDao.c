@@ -45,6 +45,7 @@ static void PgDao_init(PgDao *This) {
 	This->getFieldValueAsIntByNum = PgDao_getFieldValueAsIntByNum;
 	This->getFieldValueAsDoubleByNum = PgDao_getFieldValueAsDoubleByNum;
 	This->createTable = PgDao_createTable;
+	This->createIndex = PgDao_createIndex;
 	This->clearResult = PgDao_clearResult;
 	This->beginTrans = PgDao_beginTrans;
 	This->endTrans = PgDao_endTrans;
@@ -355,9 +356,9 @@ int PgDao_updateEntries(PgDao *This, const char *table, const char *fields[], co
 
 int PgDao_createTable(PgDao *This, const char *table, const char *fields[], const char *types[], int nb, int numSpecialField) {
 	int res;
-	char *createTableTpl = "CREATE TABLE %s (%s)";
-	char *typedFieldTpl = "%s %s";
-	char *typedFieldTplWithComma = "%s %s,";
+	char createTableTpl[] = "CREATE TABLE %s (%s)";
+	char typedFieldTpl[] = "%s %s";
+	char typedFieldTplWithComma[] = "%s %s,";
 	char *typedFields = NULL;
 
 	int i = 0;
@@ -390,6 +391,40 @@ int PgDao_createTable(PgDao *This, const char *table, const char *fields[], cons
 	res = This->execQuery(This, query);
 
 	free(typedFields);
+	free(query);
+
+	return res;
+}
+
+int PgDao_createIndex(PgDao *This, const char *table, const char *index, const char *fields[], int nb) {
+	int res;
+	char createIndexTpl[] = "CREATE INDEX %s on %s (%s)";
+	char fieldTpl[] = "%s";
+	char fieldTplWithComma[] = "%s,";
+	char *indexFields = NULL;
+
+	int i = 0;
+	for (i = 0; i < nb; i++) {
+		char *tpl = NULL;
+
+		if (i == nb - 1) {
+			tpl = &fieldTpl[0];
+		} else {
+			tpl = &fieldTplWithComma[0];
+		}
+
+		if (indexFields == NULL) {
+			indexFields = allocStr(tpl, fields[i]);
+		} else {
+			indexFields = reallocStr(indexFields, tpl, fields[i]);
+		}
+	}
+
+	char *query = allocStr(createIndexTpl, index, table, indexFields);
+	This->logDebugFormat("create index query = %s\n", query);
+	res = This->execQuery(This, query);
+
+	free(indexFields);
 	free(query);
 
 	return res;
