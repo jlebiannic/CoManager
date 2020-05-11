@@ -23,6 +23,7 @@ typedef struct Dao {
 	char* (*getFieldValueByNum)(struct Dao*, int);
 	int (*getFieldValueAsIntByNum)(struct Dao*, int);
 	double (*getFieldValueAsDoubleByNum)(struct Dao*, int);
+	int (*createTable)(struct Dao*, const char*, const char*[], const char*[], int nb, int numSpecialField);
 	void (*clearResult)(struct Dao*);
 	int (*beginTrans)(struct Dao*);
 	int (*endTrans)(struct Dao*);

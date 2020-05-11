@@ -44,6 +44,7 @@ static void PgDao_init(PgDao *This) {
 	This->getFieldValueByNum = PgDao_getFieldValueByNum;
 	This->getFieldValueAsIntByNum = PgDao_getFieldValueAsIntByNum;
 	This->getFieldValueAsDoubleByNum = PgDao_getFieldValueAsDoubleByNum;
+	This->createTable = PgDao_createTable;
 	This->clearResult = PgDao_clearResult;
 	This->beginTrans = PgDao_beginTrans;
 	This->endTrans = PgDao_endTrans;
@@ -117,9 +118,8 @@ int PgDao_execQuery(PgDao *This, const char *query) {
 	int res = FALSE;
 	if (This->openDB(This, NULL)) {
 		PgDao_addResult(This, PQexec(This->conn, query));
-
-		if (PQresultStatus(This->result) != PGRES_TUPLES_OK) {
-			This->logError("PgDao_exec failed", PQerrorMessage(This->conn));
+		if (PQresultStatus(This->result) != PGRES_TUPLES_OK && PQresultStatus(This->result) != PGRES_COMMAND_OK) {
+			This->logErrorFormat("PgDao_execQuery: %s failed, message=%s (status code=%d)", query, PQerrorMessage(This->conn), (int) PQresultStatus(This->result));
 			PgDao_clearResult(This);
 		} else {
 			res = TRUE;
@@ -325,7 +325,7 @@ int PgDao_updateEntries(PgDao *This, const char *table, const char *fields[], co
 	char *updateSet = allocStr("UPDATE %s SET", table);
 	char *updateElems = NULL;
 	char *updateFilter = filter != NULL && strlen(filter) > 0 ? allocStr("WHERE %s", filter) : "";
-        int i=0;
+	int i = 0;
 	for (i = 0; i < nb; i++) {
 		char *tpl = NULL;
 		if (i == nb - 1) {
@@ -348,6 +348,45 @@ int PgDao_updateEntries(PgDao *This, const char *table, const char *fields[], co
 	free(updateSet);
 	free(updateElems);
 	free(updateFilter);
+	free(query);
+
+	return res;
+}
+
+int PgDao_createTable(PgDao *This, const char *table, const char *fields[], const char *types[], int nb, int numSpecialField) {
+	int res;
+	char *createTableTpl = "CREATE TABLE %s (%s)";
+	char *typedFieldTpl = "%s %s";
+	char *typedFieldTplWithComma = "%s %s,";
+	char *typedFields = NULL;
+
+	int i = 0;
+	for (i = 0; i < nb; i++) {
+		char *tpl = NULL;
+
+		if (i == nb - 1) {
+			tpl = &typedFieldTpl[0];
+		} else {
+			tpl = &typedFieldTplWithComma[0];
+		}
+
+		char *type = types[i];
+		if (numSpecialField == nb) {
+			typedFields = allocStr(tpl, fields[i], "SERIAL PRIMARY KEY");
+		}
+
+		if (typedFields == NULL) {
+			typedFields = allocStr(tpl, fields[i], type);
+		} else {
+			typedFields = reallocStr(typedFields, tpl, fields[i], type);
+		}
+	}
+
+	char *query = allocStr(createTableTpl, table, typedFields);
+	This->logDebugFormat("create table query = %s\n", query);
+	res = This->execQuery(This, query);
+
+	free(typedFields);
 	free(query);
 
 	return res;

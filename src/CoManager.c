@@ -21,7 +21,10 @@ int main(void) {
 	Dao *dao = daoFactory_create(1);
 	dao->openDB(dao, NULL);
 
-
+	char *fields[3] = { "Ci1", "Ct2", "Cn3" };
+	char *types[3] = { "INTEGER", "TEXT", "NUMERIC" };
+	dao->createTable(dao, "testDaoCreateTable", fields, types, 3, 0);
+	
 	dao->execQuery(dao, "select next from syslog where tx_index > 0");
 	while (dao->hasNextEntry(dao)) {
 		char *str = dao->getFieldValue(dao, "next");
