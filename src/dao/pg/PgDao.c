@@ -2,11 +2,11 @@
 #include "dao/dao.h"
 #include "commons/commons.h"
 
-#include<stdlib.h>
+#include <ctype.h>
 #include<stdio.h>
+#include <stdlib.h>
 #include<string.h>
 #include <time.h>
-#include <ctype.h>
 
 static int ID = 1;
 static int ROWS_PER_FETCH = 100; // TODO application parameter
@@ -20,7 +20,8 @@ static void PgDao_addResult(PgDao *This, PGresult *res);
 static int PgDao_fetch(PgDao *This);
 static int PgDao_doCommand(PgDao *This, char *command);
 static void PgDao_closeCursor(PgDao *This);
-static char* p_toPgStx(const char *str, int *nbValuesFound);
+static char* p_toPgStx(const char *str, int *nbValuesFound, int startAt);
+static char* p_makeSelectQuery(const char *table, const char *fields[], int nbFields, const char *filter, int *nbValues);
 
 /******************************************************************************/
 
@@ -46,6 +47,8 @@ static void PgDao_init(PgDao *This) {
 	This->getFieldValueAsDoubleByNum = PgDao_getFieldValueAsDoubleByNum;
 	This->createTable = PgDao_createTable;
 	This->createIndex = PgDao_createIndex;
+    This->removeTable = PgDao_removeTable;
+    This->createTriggersEntryCount = PgDao_createTriggersEntryCount;
 	This->clearResult = PgDao_clearResult;
 	This->beginTrans = PgDao_beginTrans;
 	This->endTrans = PgDao_endTrans;
@@ -169,18 +172,20 @@ int PgDao_execQueryParams(PgDao *This, const char *queryFormat, const char *para
  * 	filter: can be c1=$ or c1=$1
  * 	values: values for "$" in filter
  * */
-int PgDao_getEntries(PgDao *This, const char *table, const char *fields[], int nbFields, const char *filter, const char *values[]) {
+int PgDao_getEntries(PgDao *This, const char *table, const char *fields[], int nbFields, const char *filter, const char *values[], int cursorMode) {
 	This->logDebug("PgDao_getEntries", "start");
-	char *selectFields = arrayJoin(fields, nbFields, ",");
+
 	int nbValues = 0;
-	char *query = filter != NULL && strlen(filter) > 0 ? 
-					allocStr("Select %s from %s where %s", selectFields, table, p_toPgStx(filter, &nbValues))
-					:allocStr("Select %s from %s", selectFields, table);
+	char *query = p_makeSelectQuery(table, fields, nbFields, filter, &nbValues);
 	This->logDebugFormat("[getEntries]select query = %s\n", query);
-	
-	int res = This->execQueryParamsMultiResults(This, query, values, nbValues);
+
+	int res;
+	if (cursorMode) {
+		res = This->execQueryParamsMultiResults(This, query, values, nbValues);
+	} else {
+		res = This->execQueryParams(This, query, values, nbValues);
+	}
 	free(query);
-	free(selectFields);
 	return res;
 }
 
@@ -318,14 +323,16 @@ unsigned int PgDao_newEntry(PgDao *This, const char *table) {
 	return idx;
 }
 
-int PgDao_updateEntries(PgDao *This, const char *table, const char *fields[], const char *values[], int nb, const char *filter) {
+int PgDao_updateEntries(PgDao *This, const char *table, const char *fields[], const char *values[], int nb, const char *filter, const char *filterValues[]) {
 	int res;
 
 	char updateElemTpl[] = "%s=$%d";
 	char updateElemWithCommaTpl[] = "%s=$%d,";
 	char *updateSet = allocStr("UPDATE %s SET", table);
 	char *updateElems = NULL;
-	char *updateFilter = filter != NULL && strlen(filter) > 0 ? allocStr("WHERE %s", filter) : "";
+	int nbAllValues = -1;
+	char *updateFilter = filter != NULL && strlen(filter) > 0 ?
+			allocStr("WHERE %s", p_toPgStx(filter, &nbAllValues, nb + 1)) : "";
 	int i = 0;
 	for (i = 0; i < nb; i++) {
 		char *tpl = NULL;
@@ -344,8 +351,9 @@ int PgDao_updateEntries(PgDao *This, const char *table, const char *fields[], co
 
 	char *query = allocStr("%s %s %s", updateSet, updateElems, updateFilter);
 	This->logDebugFormat("update query = %s\n", query);
-	res = This->execQueryParams(This, query, values, nb);
-
+	char **allValues = arrayConcat((char**) values, nb, (char**) filterValues, nbAllValues - nb);
+	res = This->execQueryParams(This, query, (const char**) allValues, nbAllValues);
+	free(allValues);
 	free(updateSet);
 	free(updateElems);
 	free(updateFilter);
@@ -354,12 +362,30 @@ int PgDao_updateEntries(PgDao *This, const char *table, const char *fields[], co
 	return res;
 }
 
-int PgDao_createTable(PgDao *This, const char *table, const char *fields[], const char *types[], int nb, int numSpecialField) {
+int PgDao_removeTable(PgDao *This, const char *table, int dropIfExists) {
+    int res;
+    char removeTableTpl[] = "DROP TABLE %s %s";
+    char ifExitsTpl[] = "IF EXISTS";
+
+    char *query = allocStr(removeTableTpl, dropIfExists ? ifExitsTpl : "", table);
+    This->logDebugFormat("remove table query = %s\n", query);
+    res = This->execQuery(This, query);
+
+    free(query);
+
+    return res;
+}
+
+int PgDao_createTable(PgDao *This, const char *table, const char *fields[], const char *types[], int nb, int numSpecialField, int removeIfExists) {
 	int res;
 	char createTableTpl[] = "CREATE TABLE %s (%s)";
 	char typedFieldTpl[] = "%s %s";
 	char typedFieldTplWithComma[] = "%s %s,";
 	char *typedFields = NULL;
+
+    if (removeIfExists) {
+        This->removeTable(This, table, TRUE);
+    }
 
 	int i = 0;
 	for (i = 0; i < nb; i++) {
@@ -430,6 +456,34 @@ int PgDao_createIndex(PgDao *This, const char *table, const char *index, const c
 	return res;
 }
 
+int PgDao_createTriggersEntryCount(PgDao *This, const char* tableName){
+    int res;
+    char createEntryCountTableTpl[] = "CREATE TABLE IF NOT EXISTS entry_count (table_name text, cnt bigint); %s; %s; %s; %s; %s; %s;";
+    char createIndex[] = "CREATE UNIQUE INDEX IF NOT EXISTS table_name_idx on entry_count (table_name)";
+    char *insertInto = allocStr("INSERT INTO entry_count (table_name, cnt) VALUES ('%s', 0) ON CONFLICT (table_name) DO UPDATE SET cnt=(select count(*) from %s)", tableName, tableName);
+    char fctIncCount[] = "CREATE OR REPLACE FUNCTION inc_count_fct() RETURNS trigger AS $$ BEGIN UPDATE entry_count set cnt=cnt+1 where table_name=TG_ARGV[0]; RETURN NULL; END; $$ LANGUAGE plpgsql";
+	char fctDecCount[] = "CREATE OR REPLACE FUNCTION dec_count_fct() RETURNS trigger AS $$ BEGIN UPDATE entry_count set cnt=cnt-1 where table_name=TG_ARGV[0]; RETURN NULL; END; $$ LANGUAGE plpgsql";
+    char *triggerIncCount = allocStr("DROP TRIGGER IF EXISTS inc_count on %s; CREATE TRIGGER inc_count AFTER INSERT ON %s FOR EACH ROW EXECUTE PROCEDURE inc_count_fct(%s)", tableName, tableName, tableName);
+    char *triggerDecCount = allocStr("DROP TRIGGER IF EXISTS dec_count on %s; CREATE TRIGGER dec_count AFTER DELETE ON %s FOR EACH ROW EXECUTE PROCEDURE dec_count_fct(%s)", tableName, tableName, tableName);
+
+    char *query = allocStr(createEntryCountTableTpl, createIndex, insertInto, fctIncCount, fctDecCount, triggerIncCount, triggerDecCount);
+	This->logDebugFormat("createTriggersEntryCount query = %s\n", query);
+    // if(This->beginTrans(This)){
+		res = This->execQuery(This, query);
+	// 	if(!res){
+    //         This->Rollback(This);
+    //     }
+    //     This->endTrans(This)
+	// }
+
+    free(insertInto);
+    free(triggerIncCount);
+    free(triggerDecCount);
+    free(query);
+
+    return res;
+}
+
 int PgDao_beginTrans(PgDao *This) {
 	This->logDebug("PgDao_beginTrans", "start");
 	return PgDao_doCommand(This, "BEGIN");
@@ -489,7 +543,6 @@ static void PgDao_addResult(PgDao *This, PGresult *res) {
 	This->resultCurrentRow = 0;
 }
 
-
 static int PgDao_fetch(PgDao *This) {
 	This->logDebug("PgDao_fetch", "start");
 	int res = -1;
@@ -537,13 +590,13 @@ static void PgDao_closeCursor(PgDao *This) {
  *     become
  *     select * from t where c1=$1 and c2>$2
  * */
-static char* p_toPgStx(const char *str, int *nbValuesFound) {
+static char* p_toPgStx(const char *str, int *nbValuesFound, int startAt) {
 	char *strRes = NULL;
 	int len = strlen(str) * 2;
 	int currentResLen = len;
 	strRes = (char*) malloc(len + 1);
 	strcpy(strRes, "");
-	int cpt = 1;
+	int cpt = startAt;
 	char *varNum = NULL;
 	while (*str != '\0') {
 		strncat(strRes, str, 1);
@@ -557,7 +610,6 @@ static char* p_toPgStx(const char *str, int *nbValuesFound) {
 				}
 				strcat(strRes, varNum);
 				free(varNum);
-
 			}
 			cpt++;
 		}
@@ -567,4 +619,12 @@ static char* p_toPgStx(const char *str, int *nbValuesFound) {
 	return strRes;
 }
 
-
+static char* p_makeSelectQuery(const char *table, const char *fields[], int nbFields, const char *filter, int *nbValues) {
+	char *selectFields = arrayJoin(fields, nbFields, ",");
+	char *query =
+			filter != NULL && strlen(filter) > 0 ?
+					allocStr("Select %s from %s where %s", selectFields, table, p_toPgStx(filter, nbValues, 1))
+					: allocStr("Select %s from %s", selectFields, table);
+	free(selectFields);
+	return query;
+}

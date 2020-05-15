@@ -13,8 +13,8 @@ typedef struct Dao {
 	int (*execQueryParams)(struct Dao*, const char*, const char*[], int);
 	int (*execQueryParamsMultiResults)(struct Dao*, const char*, const char*[], int);
 	unsigned int (*newEntry)(struct Dao*, const char *table);
-	int (*updateEntries)(struct Dao*, const char*, const char*[], const char*[], int nb, const char*);
-	int (*getEntries)(struct Dao*, const char*, const char*[], int, const char*, const char*[]);
+	int (*updateEntries)(struct Dao*, const char*, const char*[], const char*[], int, const char*, const char*[]);
+	int (*getEntries)(struct Dao*, const char*, const char*[], int, const char*, const char*[], int);
 	void (*getNextEntry)(struct Dao*);
 	int (*hasNextEntry)(struct Dao*);
 	char* (*getFieldValue)(struct Dao*, const char*);
@@ -23,19 +23,20 @@ typedef struct Dao {
 	char* (*getFieldValueByNum)(struct Dao*, int);
 	int (*getFieldValueAsIntByNum)(struct Dao*, int);
 	double (*getFieldValueAsDoubleByNum)(struct Dao*, int);
-	int (*createTable)(struct Dao*, const char*, const char*[], const char*[], int nb, int numSpecialField);
-	int (*createIndex)(struct Dao*, const char*, const char*, const char*[], int nb);
+    int (*createTable)(struct Dao *, const char *, const char *[], const char *[], int, int, int);
+    int (*createIndex)(struct Dao *, const char *, const char *, const char *[], int);
+	int (*removeTable)(struct Dao *, const char *, int);
+	int (*createTriggersEntryCount)(struct Dao *, const char *);
 	void (*clearResult)(struct Dao*);
 	int (*beginTrans)(struct Dao*);
 	int (*endTrans)(struct Dao*);
 	void (*logError)(const char*, const char*);
-	void (*logErrorFormat)(char *formatAndParams, ...);
+    void (*logErrorFormat)(char *, ...);
 	void (*logDebug)(const char*, const char*);
-	void (*logDebugFormat)(char *formatAndParams, ...);
+    void (*logDebugFormat)(char *, ...);
 
 /*  datas member                                  */
 } Dao;
-
 
 void Dao_init(Dao*);
 void Dao_logError(const char *fctName, const char *msg);

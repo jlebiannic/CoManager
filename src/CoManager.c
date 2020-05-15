@@ -23,7 +23,7 @@ int main(void) {
 
 	const char *fields[3] = { "Ci1", "Ct2", "Cn3" };
 	const char *types[3] = { "INTEGER", "TEXT", "NUMERIC" };
-	dao->createTable(dao, "testDaoCreateTable", fields, types, 3, 0);
+	dao->createTable(dao, "testDaoCreateTable", fields, types, 3, 0, 1);
 	
 	const char *indexeFields[3] = { "Ct2", "Cn3" };
 	dao->createIndex(dao, "testDaoCreateTable", "IDX_TEST", indexeFields, 2);
@@ -38,10 +38,17 @@ int main(void) {
 	// dao->execQueryParamsMultiResults(dao, "select next from syslog where tx_index > $1 order by tx_index", 0);
 	char *fields0[1] = { "next" };
 	char *values0[1] = { "0" };
-	dao->getEntries(dao, "syslog", (const char**) fields0, 1, "tx_index > $ order by tx_index", (const char**) values0);
+	dao->getEntries(dao, "syslog", (const char**) fields0, 1, "tx_index > $ order by tx_index", (const char**) values0, TRUE);
 	while (dao->hasNextEntry(dao)) {
 		char *str = dao->getFieldValue(dao, "next");
 		printf("#next is %s\n", str);
+		dao->getNextEntry(dao);
+	}
+
+	dao->getEntries(dao, "syslog", (const char**) fields0, 1, "tx_index > $ order by tx_index", (const char**) values0, FALSE);
+	while (dao->hasNextEntry(dao)) {
+		char *str = dao->getFieldValue(dao, "next");
+		printf("##next is %s\n", str);
 		dao->getNextEntry(dao);
 	}
 
@@ -69,7 +76,8 @@ int main(void) {
 
 	char *fields3[2] = { "autack", "info" };
 	char *values3[2] = { "a updated", "i updated" };
-	dao->updateEntries(dao, "syslog", (const char**) fields3, (const char**) values3, 2, "autack='0'");
+	char *filterValues[2] = { "0" };
+	dao->updateEntries(dao, "syslog", (const char**) fields3, (const char**) values3, 2, "autack='$'", (const char**) filterValues);
 
 	const char *values4[1] = { "a updated" };
 	dao->execQueryParams(dao, "select info, autack from syslog where autack=$1 order by tx_index", values4, 1);
@@ -82,6 +90,12 @@ int main(void) {
 		dao->getNextEntry(dao);
 	}
 
+	char *fields31[2] = { "autack", "info" };
+	char *values31[2] = { "a updated", "i updated" };
+	char *filterValues1[1] = { "test" };
+	dao->updateEntries(dao, "syslog", (const char**) fields31, (const char**) values31, 2, "autack=$", (const char**) filterValues1);
+
+
 //	int idx = dao->newEntry(dao, "syslog");
 //	printf("idx is %d\n", idx);
 //	idx = dao->newEntry(dao, "syslog");
@@ -89,18 +103,17 @@ int main(void) {
 
 	dao->closeDB(dao);
 
-	char **arr = NULL;
-	arr = (char**) malloc(sizeof(char**));
+	char *arr[4];
 
 	int cpt = 0;
-	arrayAddElement(arr, "test", cpt, FALSE, TRUE);
+	arrayAddElement(arr, "test", cpt, FALSE);
 	cpt++;
-	arrayAddIntElement(arr, 123, cpt, TRUE);
+	arrayAddIntElement(arr, 123, cpt);
 	cpt++;
-	arrayAddDoubleElement(arr, 456.789, cpt, TRUE);
+	arrayAddDoubleElement(arr, 456.789, cpt);
 	cpt++;
 	time_t timestamp = time( NULL);
-	arrayAddTimeElement(arr, timestamp, cpt, TRUE);
+	arrayAddTimeElement(arr, timestamp, cpt);
 
 	int i = 0;
 	for (i = 0; i <= cpt; i++) {
