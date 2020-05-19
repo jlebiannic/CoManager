@@ -41,6 +41,7 @@ static void PgDao_init(PgDao *This) {
 	This->hasNextEntry = PgDao_hasNextEntry;
 	This->getFieldValue = PgDao_getFieldValue;
 	This->getFieldValueAsInt = PgDao_getFieldValueAsInt;
+	This->getFieldValueAsDouble = PgDao_getFieldValueAsDouble;
 	This->getResultNbFields = PgDao_getResultNbFields;
 	This->getFieldValueByNum = PgDao_getFieldValueByNum;
 	This->getFieldValueAsIntByNum = PgDao_getFieldValueAsIntByNum;
@@ -49,6 +50,7 @@ static void PgDao_init(PgDao *This) {
 	This->createIndex = PgDao_createIndex;
     This->removeTable = PgDao_removeTable;
     This->createTriggersEntryCount = PgDao_createTriggersEntryCount;
+	This->getNbResults = PgDao_getNbResults;
 	This->clearResult = PgDao_clearResult;
 	This->beginTrans = PgDao_beginTrans;
 	This->endTrans = PgDao_endTrans;
@@ -231,6 +233,11 @@ void PgDao_getNextEntry(PgDao *This) {
 int PgDao_getFieldValueAsInt(PgDao *This, const char *fieldName) {
 	This->logDebug("PgDao_getFieldValueAsInt", "start");
 	return strtol(This->getFieldValue(This, fieldName), (char**) NULL, 10);
+}
+
+double PgDao_getFieldValueAsDouble(PgDao *This, const char *fieldName) {
+	This->logDebug("PgDao_getFieldValueAsInt", "start");
+	return strtod(This->getFieldValue(This, fieldName), (char**) NULL);
 }
 
 char* PgDao_getFieldValue(PgDao *This, const char *fieldName) {
@@ -482,6 +489,10 @@ int PgDao_createTriggersEntryCount(PgDao *This, const char* tableName){
     free(query);
 
     return res;
+}
+
+int PgDao_getNbResults(PgDao *This) {
+	return PQntuples(This->result);
 }
 
 int PgDao_beginTrans(PgDao *This) {

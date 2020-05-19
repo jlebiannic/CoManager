@@ -21,6 +21,7 @@ typedef struct PgDao {
 	int (*hasNextEntry)(struct PgDao*);
 	char* (*getFieldValue)(struct PgDao*, const char*);
 	int (*getFieldValueAsInt)(struct PgDao*, const char*);
+	double (*getFieldValueAsDouble)(struct PgDao*, const char*);
 	int (*getResultNbFields)(struct PgDao*);
 	char* (*getFieldValueByNum)(struct PgDao*, int);
 	int (*getFieldValueAsIntByNum)(struct PgDao*, int);
@@ -29,6 +30,7 @@ typedef struct PgDao {
     int (*createIndex)(struct PgDao *, const char *, const char *, const char *[], int);
 	int (*removeTable)(struct PgDao *, const char *, int);
     int (*createTriggersEntryCount)(struct PgDao *, const char *);
+	int (*getNbResults)(struct PgDao*);
 	void (*clearResult)(struct PgDao*);
 	int (*beginTrans)(struct PgDao*);
 	int (*endTrans)(struct PgDao*);
@@ -65,6 +67,7 @@ void PgDao_getNextEntry(PgDao*);
 int PgDao_hasNextEntry(PgDao*);
 char* PgDao_getFieldValue(PgDao *This, const char *fieldName);
 int PgDao_getFieldValueAsInt(PgDao *This, const char *fieldName);
+double PgDao_getFieldValueAsDouble(PgDao *This, const char *fieldName);
 int PgDao_getResultNbFields(PgDao *This);
 char* PgDao_getFieldValueByNum(PgDao *This, int numField);
 int PgDao_getFieldValueAsIntByNum(PgDao *This, int numField);
@@ -73,6 +76,7 @@ int PgDao_createTable(PgDao *This, const char *table, const char *fields[], cons
 int PgDao_createIndex(PgDao *This, const char *table, const char *index, const char *fields[], int nb);
 int PgDao_removeTable(PgDao *This, const char *table, int dropIfExists);
 int PgDao_createTriggersEntryCount(PgDao *This, const char *tableName);
+int PgDao_getNbResults(PgDao *This);
 void PgDao_clearResult(PgDao*);
 int PgDao_beginTrans(PgDao*);
 int PgDao_endTrans(PgDao*);

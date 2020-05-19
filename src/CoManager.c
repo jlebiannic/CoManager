@@ -15,7 +15,7 @@
 #include "commons/daoFactory.h"
 #include "commons/commons.h"
 
-int main(void) {
+int cm(void) {
 	puts("Main start");
 
 	Dao *dao = daoFactory_create(1);
@@ -23,7 +23,7 @@ int main(void) {
 
 	const char *fields[3] = { "Ci1", "Ct2", "Cn3" };
 	const char *types[3] = { "INTEGER", "TEXT", "NUMERIC" };
-	dao->createTable(dao, "testDaoCreateTable", fields, types, 3, 0, 1);
+	dao->createTable(dao, "testDaoCreateTable", fields, types, 3, 0, TRUE);
 	
 	const char *indexeFields[3] = { "Ct2", "Cn3" };
 	dao->createIndex(dao, "testDaoCreateTable", "IDX_TEST", indexeFields, 2);

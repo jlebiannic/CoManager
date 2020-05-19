@@ -55,25 +55,24 @@ void freeArray(char *array[], int nb) {
 
 char* arrayJoin(const char *fields[], int nb, char *sep) {
 	int i = 0;
-	char *str = NULL;
-	char *res = NULL;
+	int MAX = 500;
+	int maxLen = MAX;
+	char *str = str = (char*) malloc(maxLen);
+	strcpy(str, "");
+
 	for (i = 0; i < nb; i++) {
-		if (str == NULL) {
-			str = (char*) malloc(strlen(fields[i]) + 1);
-			strcpy(str, fields[i]);
-			res = str;
-		} else {
-			int len = strlen(str);
-			str = str + len;
-			str = (char*) realloc(str, len + strlen(fields[i]) + 1);
-			strcpy(str, fields[i]);
+		int fieldLen = strlen(fields[i]);
+		if ((fieldLen + strlen(str)) + 1 >= maxLen) {
+			maxLen = strlen(str) + fieldLen + MAX;
+			str = (char*) realloc(str, maxLen);
 		}
+		strcat(str, fields[i]);
 
 		if (i < nb - 1) {
 			strcat(str, sep);
 		}
 	}
-	return res;
+	return str;
 }
 
 static void p_arrayAddElement(char **array, char *element, int idx) {
