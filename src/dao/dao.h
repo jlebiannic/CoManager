@@ -2,49 +2,55 @@
 #define DAO_H
 
 typedef struct Dao {
-	/*  functions member                              */
-	int id;
-	int (*openDB)(struct Dao*, const char*);
-	int (*isDBOpen)(struct Dao*);
-	void (*closeDB)(struct Dao*);
-	void (*closeDBAndExit)(struct Dao*);
-	int (*execQuery)(struct Dao*, const char*);
-	int (*execQueryMultiResults)(struct Dao*, const char*);
-	int (*execQueryParams)(struct Dao*, const char*, const char*[], int);
-	int (*execQueryParamsMultiResults)(struct Dao*, const char*, const char*[], int);
-	unsigned int (*newEntry)(struct Dao*, const char *table);
-	int (*updateEntries)(struct Dao*, const char*, const char*[], const char*[], int, const char*, const char*[]);
-	int (*removeEntries)(struct Dao*, const char *table, const char *filter, const char *filterValues[]);
-	int (*getEntries)(struct Dao*, const char*, const char*[], int, const char*, const char*[], int);
-	void (*getNextEntry)(struct Dao*);
-	int (*hasNextEntry)(struct Dao*);
-	char* (*getFieldValue)(struct Dao*, const char*);
-	int (*getFieldValueAsInt)(struct Dao*, const char*);
-	double (*getFieldValueAsDouble)(struct Dao*, const char*);
-	int (*getResultNbFields)(struct Dao*);
-	char* (*getFieldValueByNum)(struct Dao*, int);
-	int (*getFieldValueAsIntByNum)(struct Dao*, int);
-	double (*getFieldValueAsDoubleByNum)(struct Dao*, int);
-    int (*createTable)(struct Dao *, const char *, const char *[], const char *[], int, int, int);
-    int (*createIndex)(struct Dao *, const char *, const char *, const char *[], int);
-	int (*removeTable)(struct Dao *, const char *, int);
-	int (*createTriggersEntryCount)(struct Dao *, const char *);
-	int (*getNbResults)(struct Dao*);
-	void (*clearResult)(struct Dao*);
-	int (*beginTrans)(struct Dao*);
-	int (*endTrans)(struct Dao*);
-	void (*logError)(const char*, const char*);
-    void (*logErrorFormat)(char *, ...);
-	void (*logDebug)(const char*, const char*);
-    void (*logDebugFormat)(char *, ...);
+    /*  functions member                              */
+    int id;
+    int (*openDB)(struct Dao *This, const char *conn);
+    int (*isDBOpen)(struct Dao *This);
+    void (*closeDB)(struct Dao *This);
+    void (*closeDBAndExit)(struct Dao *This);
+    int (*execQuery)(struct Dao *This, const char *query);
+    int (*execQueryMultiResults)(struct Dao *This, const char *query);
+    int (*execQueryParams)(struct Dao *This, const char *queryFormat, const char *paramValues[], int nbParams);
+    int (*execQueryParamsMultiResults)(struct Dao *This, const char *query, const char *values[], int nbValues);
+    unsigned int (*newEntry)(struct Dao *This, const char *table, const char *fields[], const char *values[], int nb, const char* returnField);
+    int (*updateEntries)(struct Dao *This, const char *table, const char *fields[], const char *values[], int nb, const char *filter, const char *filterValues[]);
+    int (*removeEntries)(struct Dao *This, const char *table, const char *filter, const char *filterValues[]);
+    int (*getEntries)(struct Dao *This, const char *table, const char *fields[], int nbFields, const char *filter, const char *values[], const char *sortFields[], int nbSortFields, int limit, int offset, int cursorMode);
+    int (*getEntriesCount)(struct Dao *This, const char *table, const char *filter, const char *values[]);
+    void (*getNextEntry)(struct Dao *This);
+    int (*hasNextEntry)(struct Dao *This);
+    char *(*getFieldValue)(struct Dao *This, const char *fieldName);
+    int (*getFieldValueAsInt)(struct Dao *This, const char *fieldName);
+    double (*getFieldValueAsDouble)(struct Dao *This, const char *fieldName);
+    int (*getResultNbFields)(struct Dao *This);
+    char *(*getFieldValueByNum)(struct Dao *This, int numField);
+    int (*getFieldValueAsIntByNum)(struct Dao *This, int numField);
+    double (*getFieldValueAsDoubleByNum)(struct Dao *This, int numField);
+    int (*createTable)(struct Dao *This, const char *table, const char *fields[], const char *types[], int nb, int numSpecialField, int removeIfExists);
+    int (*createIndex)(struct Dao *This, const char *table, const char *index, const char *fields[], int nb);
+    int (*removeTable)(struct Dao *This, const char *table, int dropIfExists);
+    int (*createTriggersEntryCount)(struct Dao *This, const char *tableName);
+    int (*getNbResults)(struct Dao *This);
+    void (*clearResult)(struct Dao *This);
+    int (*beginTrans)(struct Dao *This);
+    int (*endTrans)(struct Dao *This);
+    int (*rollbackTrans)(struct Dao *This);
+    void (*freeDao)(struct Dao *This);
+    void (*logTrace)(const char *fctName, const char *msg);
+    void (*logDebug)(const char *fctName, const char *msg);
+    void (*logError)(const char *fctName, const char *msg);
+    void (*logDebugFormat)(char *formatAndParams, ...);
+    void (*logErrorFormat)(char *formatAndParams, ...);
 
-/*  datas member                                  */
+    /*  datas member                                  */
 } Dao;
 
-void Dao_init(Dao*);
-void Dao_logError(const char *fctName, const char *msg);
-void Dao_logErrorFormat(char *formatAndParams, ...);
+void Dao_init(Dao *);
+void Dao_freeDao(Dao *This);
+void Dao_logTrace(const char *fctName, const char *msg);
 void Dao_logDebug(const char *fctName, const char *msg);
+void Dao_logError(const char *fctName, const char *msg);
 void Dao_logDebugFormat(char *formatAndParams, ...);
+void Dao_logErrorFormat(char *formatAndParams, ...);
 
 #endif

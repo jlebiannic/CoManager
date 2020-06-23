@@ -16,10 +16,12 @@
 #endif
 
 char* allocStr(const char *formatAndParams, ...);
-char* reallocStr(char *str, const char *formatAndParams, ...);
+char *allocStrPlusSize(int plusSize, const char *formatAndParams, ...);
+char *reallocStr(char *str, const char *formatAndParams, ...);
 char* uitoa(unsigned int uint);
 char* inttoa(int i);
-void freeArray(char **array, int nb);
+char *dbltoa(double dbl);
+void arrayFree(char **array, int nb);
 char* arrayJoin(const char *fields[], int nb, char *sep);
 void arrayAddElement(char **array, char *element, int idx, int allocElement);
 void arrayAddTimeElement(char **array, time_t element, int idx);

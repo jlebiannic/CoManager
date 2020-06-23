@@ -5,6 +5,7 @@
 #include <time.h>
 
 // FIXME move these functions to a real commons lib
+
 char* allocStr(const char *formatAndParams, ...) {
 	va_list ap;
 	va_start(ap, formatAndParams);
@@ -15,6 +16,18 @@ char* allocStr(const char *formatAndParams, ...) {
 	vsprintf(str, formatAndParams, ap);
 	return str;
 }
+
+char* allocStrPlusSize(int plusSize, const char *formatAndParams, ...) {
+	va_list ap;
+	va_start(ap, formatAndParams);
+	int size = vsnprintf(NULL, 0, formatAndParams, ap);
+	va_end(ap);
+	char *str = malloc(size + 1 + plusSize);
+	va_start(ap, formatAndParams);
+	vsprintf(str, formatAndParams, ap);
+	return str;
+}
+
 
 char* reallocStr(char *str, const char *formatAndParams, ...) {
 	va_list ap;
@@ -46,7 +59,15 @@ char* inttoa(int i) {
 	return str;
 }
 
-void freeArray(char *array[], int nb) {
+char* dbltoa(double dbl) {
+	char *str = NULL;
+	const int size = snprintf(NULL, 0, "%f", dbl);
+	str = (char*) malloc(size + 1);
+	sprintf(str, "%f", dbl);
+	return str;
+}
+
+void arrayFree(char *array[], int nb) {
 	int i=0;
 	for (i = 0; i < nb; i++) {
 		free(array[i]);

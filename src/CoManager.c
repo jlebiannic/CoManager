@@ -27,7 +27,7 @@ int cm(void) {
 	
 	const char *indexeFields[3] = { "Ct2", "Cn3" };
 	dao->createIndex(dao, "testDaoCreateTable", "IDX_TEST", indexeFields, 2);
-
+	
 	dao->execQuery(dao, "select next from syslog where tx_index > 0");
 	while (dao->hasNextEntry(dao)) {
 		char *str = dao->getFieldValue(dao, "next");
@@ -38,14 +38,14 @@ int cm(void) {
 	// dao->execQueryParamsMultiResults(dao, "select next from syslog where tx_index > $1 order by tx_index", 0);
 	char *fields0[1] = { "next" };
 	char *values0[1] = { "0" };
-	dao->getEntries(dao, "syslog", (const char**) fields0, 1, "tx_index > $ order by tx_index", (const char**) values0, TRUE);
+	dao->getEntries(dao, "syslog", (const char**) fields0, 1, "tx_index > $ order by tx_index", (const char**) values0, NULL, 0, -1,-1, TRUE);
 	while (dao->hasNextEntry(dao)) {
 		char *str = dao->getFieldValue(dao, "next");
 		printf("#next is %s\n", str);
 		dao->getNextEntry(dao);
 	}
 
-	dao->getEntries(dao, "syslog", (const char**) fields0, 1, "tx_index > $ order by tx_index", (const char**) values0, FALSE);
+	dao->getEntries(dao, "syslog", (const char**) fields0, 1, "tx_index > $ order by tx_index", (const char**) values0, NULL, 0, -1,-1, FALSE);
 	while (dao->hasNextEntry(dao)) {
 		char *str = dao->getFieldValue(dao, "next");
 		printf("##next is %s\n", str);
